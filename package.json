@@ -1,0 +1,110 @@
+{
+  "name": "@d0whc3r/node-s3",
+  "version": "0.0.1",
+  "license": "MIT",
+  "author": {
+    "email": "d0whc3r@gmail.com",
+    "name": "d0whc3r",
+    "url": "https://github.com/d0whc3r"
+  },
+  "bin": {
+    "s3node": "./bin/cli.js"
+  },
+  "repository": "https://github.com/d0whc3r/node-s3.git",
+  "keywords": [
+    "node",
+    "aws",
+    "s3",
+    "backup",
+    "upload",
+    "compress",
+    "copy"
+  ],
+  "scripts": {
+    "dev": "dotenv -e .env -- node -r ts-node/register -r tsconfig-paths/register src/test.ts",
+    "cli:dev": "dotenv -e .env -- yarn cli",
+    "cli": "node -r ts-node/register -r tsconfig-paths/register cli/cli.ts",
+    "lint": "tslint -p .",
+    "build:clean": "rimraf dist bin",
+    "build:dist": "rollup -c",
+    "build:dts": "dts-bundle-generator -o dist/index.d.ts src/index.ts --umd-module-name=s3",
+    "copy:dts": "cp src/main.d.ts dist/index.d.ts",
+    "build": "yarn build:clean && yarn build:dist && yarn build:dts",
+    "test": "jest -i --verbose --colors",
+    "test:fakeci": "dotenv -e test.env -- yarn test",
+    "test:coverage": "yarn test --coverage",
+    "test:send-coverages": "yarn coverage:codecovs && yarn coverage:coveralls && yarn coverage:codacy",
+    "coverage:codecovs": "codecov -f coverage/*.json -t ${CODECOVS_TOKEN}",
+    "coverage:coveralls": "cat ./coverage/lcov.info | coveralls",
+    "coverage:codacy": "cat ./coverage/lcov.info | codacy-coverage -p . --language typescript",
+    "postversion": "git push --follow-tags"
+  },
+  "dependencies": {
+    "archiver": "4.0.1",
+    "aws-sdk": "2.658.0",
+    "colors": "1.4.0",
+    "command-line-args": "5.1.1",
+    "command-line-usage": "6.1.0",
+    "dayjs": "1.8.24",
+    "glob": "7.1.6",
+    "mime-types": "2.1.26",
+    "mysqldump": "3.1.0"
+  },
+  "devDependencies": {
+    "@babel/core": "7.9.0",
+    "@babel/plugin-syntax-import-meta": "7.8.3",
+    "@babel/plugin-transform-regenerator": "7.8.7",
+    "@babel/preset-env": "7.9.5",
+    "@types/archiver": "3.1.0",
+    "@types/command-line-args": "5.0.0",
+    "@types/command-line-usage": "5.0.1",
+    "@types/jest": "25.2.1",
+    "@types/mime-types": "2.1.0",
+    "@types/nock": "11.1.0",
+    "@types/node": "13.13.0",
+    "builtin-modules": "3.1.0",
+    "codacy-coverage": "3.4.0",
+    "codecov": "3.6.5",
+    "core-js": "3.6.5",
+    "coveralls": "3.0.11",
+    "dotenv-cli": "3.1.0",
+    "dts-bundle-generator": "4.2.0",
+    "jest": "25.3.0",
+    "jest-junit": "10.0.0",
+    "jest-sonar-reporter": "2.0.0",
+    "mock-stdin": "1.0.0",
+    "nock": "12.0.3",
+    "regenerator-runtime": "0.13.5",
+    "rimraf": "3.0.2",
+    "rollup": "2.6.1",
+    "rollup-plugin-babel": "4.4.0",
+    "rollup-plugin-commonjs": "10.1.0",
+    "rollup-plugin-json": "4.0.0",
+    "rollup-plugin-node-builtins": "2.1.2",
+    "rollup-plugin-node-resolve": "5.2.0",
+    "rollup-plugin-terser": "5.3.0",
+    "rollup-plugin-typescript2": "0.27.0",
+    "sonar-scanner": "3.1.0",
+    "ts-jest": "25.4.0",
+    "ts-loader": "7.0.0",
+    "ts-node": "8.8.2",
+    "tsconfig-paths": "3.9.0",
+    "tslint": "6.1.1",
+    "typescript": "3.8.3"
+  },
+  "files": [
+    "dist",
+    "bin"
+  ],
+  "main": "dist/s3.cjs.js",
+  "module": "dist/s3.es.mjs",
+  "types": "dist/index.d.ts",
+  "jestSonar": {
+    "reportPath": "coverage",
+    "reportFile": "test-report.xml"
+  },
+  "jest-junit": {
+    "outputDirectory": "./coverage",
+    "outputName": "./junit.xml"
+  }
+}
