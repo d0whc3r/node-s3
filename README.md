@@ -36,6 +36,16 @@ You could use cli app in docker
 docker build -t s3 .
 ```
 
+## :beginner: Environment variables
+
+- `ENDPOINT`: Endpoint to connect, could be any s3 compatible endpoint (it could be defined in commandline with `--endpoint` or `-e`, example: http://s3.eu-central-1.amazonaws.com:9000)
+- `ACCESS_KEY`: Access key to use (required)
+- `SECRET_KEY`: Secret key to use (required)
+- `BUCKET`: Bucket name to connect (it could be created using `-c` or it could be defined in commandline with `--bucket`)
+- `MAX_RETRIES`: Maximum retry connections when fail (optional, example: 3)
+- `FORCE_PATH_STYLE`: Force path style (optional, example: true)
+- `SSL_ENABLED`: Enable ssl connection to endpoint (optional, example: false)
+
 ## :checkered_flag: Cli help output
 
 Using docker image from [hub.docker.com](https://hub.docker.com/r/d0whc3r/s3)
