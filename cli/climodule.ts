@@ -1,8 +1,7 @@
-import { options } from './cliconfig';
+import { cliOptions } from './cliconfig';
 import { S3Wrapper } from '../src';
 import { Config } from '../src/config';
 import colors from 'colors';
-import { Object } from 'aws-sdk/clients/s3';
 
 const theme = {
   folder: 'cyan',
@@ -14,37 +13,39 @@ colors.setTheme(theme);
 export class Cli {
   private s3Wrapper: S3Wrapper;
 
-  constructor(private opts = options) {
+  constructor(private opts = cliOptions) {
     const { endpoint, bucket } = opts;
-    this.s3Wrapper = S3Wrapper.getInstance({ endpoint, bucket });
+    this.s3Wrapper = new S3Wrapper({ endpoint, bucket });
   }
 
   async parseOptions() {
     for (const command in this.opts) {
-      const args = this.opts[command];
-      const zip = this.opts['zip'];
-      const folder = this.opts['folder'];
-      const replace = this.opts['replace'];
-      const create = this.opts['create'];
-      switch (command) {
-        case 'backup':
-          await this.backup(args, { zip, folder, replace, create });
-          break;
-        case 'delete':
-          await this.delete(args, folder);
-          break;
-        case 'mysql':
-          await this.dumpMysql({ zip, folder, replace, create });
-          break;
-        case 'list':
-          await this.showList();
-          break;
+      if (Object.prototype.hasOwnProperty.call(this.opts, command)) {
+        const args = this.opts[command];
+        const zip = this.opts['zip'];
+        const folder = this.opts['folder'];
+        const replace = this.opts['replace'];
+        const create = this.opts['create'];
+        switch (command) {
+          case 'backup':
+            await this.backup(args, { zip, folder, replace, create });
+            break;
+          case 'delete':
+            await this.delete(args, folder);
+            break;
+          case 'mysql':
+            await this.dumpMysql({ zip, folder, replace, create });
+            break;
+          case 'list':
+            await this.showList();
+            break;
+        }
       }
     }
   }
 
   async showList() {
-    const files = (await this.s3Wrapper.getFiles());
+    const files = await this.s3Wrapper.getFiles();
     if (files.length) {
       console.info(`${Config.TAG} File list in bucket "${this.s3Wrapper.bucket}": ${files.length}`);
       this.beautifulFiles(files);
@@ -53,32 +54,31 @@ export class Cli {
     }
   }
 
-  async delete(args: string | string[], folder?: string) {
+  async delete(args: string | string[], folderName?: string) {
     if (!Array.isArray(args)) {
       args = [args];
     }
-    const parsed = args.map(this.parseDelete).map((arg) => {
-      if (!arg.folder) {
-        arg.folder = folder || null;
-      }
-      return {
-        ...arg
-      };
-    });
+    const parsed = args
+      .map((arg) => this.parseDelete(arg))
+      .map((arg) => {
+        if (!arg.folder) {
+          arg.folder = folderName || null;
+        }
+        return {
+          ...arg
+        };
+      });
     try {
       for (const info of parsed) {
         const { folder, timeSpace } = info;
         await this.s3Wrapper.cleanOlder(timeSpace, folder || undefined);
       }
-    } catch (e) {
+    } catch (_e) {
       console.error(`${Config.TAG} Error in delete files`);
     }
   }
 
-  async backup(
-      files: string | string[],
-      options: { zip?: string, folder?: string, replace?: boolean, create?: boolean }
-  ) {
+  async backup(files: string | string[], options: { zip?: string; folder?: string; replace?: boolean; create?: boolean }) {
     const { zip, folder, replace, create } = options;
     if (!Array.isArray(files)) {
       files = [files];
@@ -90,7 +90,7 @@ export class Cli {
     });
   }
 
-  async dumpMysql(options: { zip?: string, folder?: string, replace?: boolean, create?: boolean }) {
+  async dumpMysql(options: { zip?: string; folder?: string; replace?: boolean; create?: boolean }) {
     let mysqlfile = '';
     try {
       mysqlfile = await this.s3Wrapper.createDumpFile();
@@ -119,7 +119,7 @@ export class Cli {
     };
   }
 
-  private beautifulFiles(files: Object[]) {
+  private beautifulFiles(files: Record<string, any>[]) {
     const parsed = files.map((file) => file.Key);
     parsed.sort();
     parsed.forEach((file) => {

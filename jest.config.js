@@ -4,27 +4,30 @@ module.exports = {
     'jsx',
     'json',
     'ts',
-    'tsx',
+    'tsx'
   ],
   transform: {
-    '^.+\\.tsx?$': 'ts-jest',
+    '^.+\\.tsx?$': 'ts-jest'
   },
   testMatch: [
     '**/tests/**/*.spec.(js|jsx|ts|tsx)',
-    '**/__tests__/*.(js|jsx|ts|tsx)',
+    '**/__tests__/*.(js|jsx|ts|tsx)'
   ],
   testURL: 'http://localhost/',
   collectCoverage: true,
   coverageDirectory: 'coverage',
   collectCoverageFrom: [
-    'src/**/*.ts',
+    'src/**/*.ts'
   ],
   cache: false,
   testResultsProcessor: 'jest-sonar-reporter',
   reporters: ['default', 'jest-junit'],
+  setupFilesAfterEnv: ['./jest.setup-after-env.js'],
+  testEnvironment: 'node',
   globals: {
     'ts-jest': {
-      babelConfig: false,
-    },
-  },
+      tsConfig: 'tsconfig.json',
+      diagnostics: true
+    }
+  }
 };

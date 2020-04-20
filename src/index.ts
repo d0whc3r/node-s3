@@ -5,14 +5,13 @@ import { S3Config, UploadOptions, UploadOptionsBasic } from './types';
 import { Config } from './config';
 
 export class S3Wrapper {
-  private static s3Instance: S3Wrapper;
   private readonly s3Sdk: S3;
   private readonly s3Buckets: S3WrapperBuckets;
   private readonly s3Files: S3WrapperFiles;
-  public readonly bucket: string;
   private readonly options: ClientConfiguration;
+  public readonly bucket: string;
 
-  private constructor(config: S3Config = {}) {
+  constructor(config: S3Config = {}) {
     const defOptions = {
       maxRetries: Config.MAX_RETRIES,
       sslEnabled: Config.SSL_ENABLED,
@@ -32,13 +31,6 @@ export class S3Wrapper {
     this.s3Files = new S3WrapperFiles(this.s3Sdk);
     this.s3Buckets.setFileWrapper(this.s3Files);
     this.s3Files.setBucketWrapper(this.s3Buckets);
-  }
-
-  public static getInstance(config?: S3Config) {
-    if (!this.s3Instance) {
-      this.s3Instance = new S3Wrapper(config);
-    }
-    return this.s3Instance;
   }
 
   get endpoint() {

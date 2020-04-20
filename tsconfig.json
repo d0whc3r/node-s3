@@ -1,46 +1,45 @@
 {
   "compilerOptions": {
     "allowSyntheticDefaultImports": true,
-    "baseUrl": "./",
-    "declaration": false,
-    "emitDecoratorMetadata": true,
+    "allowUnreachableCode": false,
+    "resolveJsonModule": true,
     "esModuleInterop": true,
     "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "allowJs": true,
+    "skipLibCheck": false,
     "lib": [
       "es2016",
       "es6",
-      "es5",
       "es2015",
+      "esnext",
       "dom",
-      "es2015.promise"
+      "dom.iterable",
+      "scripthost"
     ],
-    "module": "esnext",
     "moduleResolution": "node",
-    "noEmitOnError": true,
-    "noImplicitAny": true,
-    "noImplicitReturns": true,
-    "noImplicitThis": false,
-    "noStrictGenericChecks": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": false,
+    "module": "commonjs",
+    "target": "esnext",
     "pretty": true,
-    "removeComments": true,
-    "resolveJsonModule": true,
-    "sourceMap": false,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "strict": true,
+    "noImplicitAny": true,
     "strictNullChecks": true,
-    "target": "es2016",
-    "traceResolution": false,
-    "types": [
-      "node",
-      "jest"
+    "baseUrl": "./src",
+    "outDir": "./dist",
+    "typeRoots": [
+      "types",
+      "node_modules/@types"
     ]
   },
-  "exclude": [
-    "node_modules"
-  ],
   "include": [
-    "./src/**/*.ts",
-    "./cli/**/*.ts"
+    "src/**/*.ts",
+    "cli/**/*.ts",
+    "tests/**/*.ts",
+    "types"
+  ],
+  "exclude": [
+    "**/node_modules"
   ]
 }

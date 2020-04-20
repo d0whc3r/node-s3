@@ -102,15 +102,15 @@ export interface S3Options extends CommandLineOptions {
   mysql?: boolean;
 }
 
-let options: S3Options = {};
+let cliOptions: S3Options = {};
 try {
-  options = commandLineArgs(optionDefinitions);
+  cliOptions = commandLineArgs(optionDefinitions);
 } catch (e) {
   console.error('[-] Error:', e.message);
   process.exit(1);
 }
 
-if (options.help || !Object.keys(options).length) {
+if (cliOptions.help || !Object.keys(cliOptions).length) {
   const ex = 's3node';
   const baseExec = `${ex} -e http://s3.eu-central-1.amazonaws.com --bucket sample`;
   const sections: Section[] = [
@@ -164,4 +164,4 @@ if (options.help || !Object.keys(options).length) {
   process.exit(0);
 }
 
-export { options };
+export { cliOptions };
