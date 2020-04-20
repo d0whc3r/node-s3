@@ -5,36 +5,38 @@ import { S3Config, UploadOptions, UploadOptionsBasic } from './types';
 import { Config } from './config';
 
 export class S3Wrapper {
-  private readonly s3Sdk: S3;
-  private readonly s3Buckets: S3WrapperBuckets;
-  private readonly s3Files: S3WrapperFiles;
-  private readonly options: ClientConfiguration;
-  public readonly bucket: string;
+  private s3Sdk!: S3;
+  private s3Buckets!: S3WrapperBuckets;
+  private s3Files!: S3WrapperFiles;
+
+  public bucket = '';
+  public endpoint = '';
 
   constructor(config: S3Config = {}) {
-    const defOptions = {
+    this.setConfig(config);
+  }
+
+  public setConfig(config: S3Config = {}) {
+    const defOptions: ClientConfiguration = {
       maxRetries: Config.MAX_RETRIES,
       sslEnabled: Config.SSL_ENABLED,
       ...config,
       s3ForcePathStyle: config.forcePathStyle !== undefined ? config.forcePathStyle : Config.FORCE_PATH_STYLE,
-      endpoint: config.endpoint || Config.ENDPOINT,
+      endpoint: config.endpoint || Config.ENDPOINT
     };
-    this.options = {
+    const options: ClientConfiguration = {
       ...defOptions,
       apiVersion: Config.API_VERSION,
       accessKeyId: Config.ACCESS_KEY,
       secretAccessKey: Config.SECRET_KEY
     };
     this.bucket = config.bucket || Config.BUCKET;
-    this.s3Sdk = new S3(this.options);
+    this.endpoint = config.endpoint || Config.ENDPOINT;
+    this.s3Sdk = new S3(options);
     this.s3Buckets = new S3WrapperBuckets(this.s3Sdk);
     this.s3Files = new S3WrapperFiles(this.s3Sdk);
     this.s3Buckets.setFileWrapper(this.s3Files);
     this.s3Files.setBucketWrapper(this.s3Buckets);
-  }
-
-  get endpoint() {
-    return this.options.endpoint;
   }
 
   // BUCKETS START

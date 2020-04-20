@@ -4,8 +4,7 @@ import { S3WrapperFiles } from './files';
 export class S3WrapperBuckets {
   private s3Files?: S3WrapperFiles;
 
-  constructor(private s3Sdk: S3) {
-  }
+  constructor(private s3Sdk: S3) {}
 
   public setFileWrapper(s3Files: S3WrapperFiles) {
     this.s3Files = s3Files;
@@ -37,13 +36,16 @@ export class S3WrapperBuckets {
 
   public removeBucket(bucket: string, force = false) {
     return new Promise<boolean>((resolve, reject) => {
-      this.s3Sdk.deleteBucket({ Bucket: bucket }, async (error) => {
+      this.s3Sdk.deleteBucket({ Bucket: bucket }, (error) => {
         if (error) {
           if (force && this.s3Files) {
-            await this.s3Files.deleteAllContent(bucket);
-            this.removeBucket(bucket, force).then(resolve).catch(reject);
+            this.s3Files
+              .deleteAllContent(bucket)
+              .then(() => {
+                this.removeBucket(bucket, force).then(resolve).catch(reject);
+              })
+              .catch(reject);
           } else {
-            // console.error('Error removing bucket', error);
             reject(error);
           }
         } else {

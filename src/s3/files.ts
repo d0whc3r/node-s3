@@ -1,4 +1,4 @@
-import S3, { Delete, DeleteObjectOutput, GetObjectOutput, Object, ObjectIdentifierList } from 'aws-sdk/clients/s3';
+import S3, { Delete, DeleteObjectOutput, GetObjectOutput, ObjectIdentifierList } from 'aws-sdk/clients/s3';
 import { S3WrapperBuckets } from './buckets';
 import { UploadOptions, UploadOptionsBasic } from '../types';
 import path from 'path';
@@ -17,15 +17,14 @@ import SendData = ManagedUpload.SendData;
 export class S3WrapperFiles {
   private s3Buckets?: S3WrapperBuckets;
 
-  constructor(private s3Sdk: S3) {
-  }
+  constructor(private s3Sdk: S3) {}
 
   public setBucketWrapper(s3Buckets: S3WrapperBuckets) {
     this.s3Buckets = s3Buckets;
   }
 
   public getFiles(bucket: string) {
-    return new Promise<Object[]>((resolve, reject) => {
+    return new Promise<Record<string, any>[]>((resolve, reject) => {
       this.s3Sdk.listObjects({ Bucket: bucket }, (error, data) => {
         if (error) {
           reject(error);
@@ -50,7 +49,9 @@ export class S3WrapperFiles {
 
   public fileExist(bucket: string, name: string) {
     return new Promise<boolean>((resolve) => {
-      this.fileInfo(bucket, name).then(() => resolve(true)).catch(() => resolve(false));
+      this.fileInfo(bucket, name)
+        .then(() => resolve(true))
+        .catch(() => resolve(false));
     });
   }
 
@@ -59,11 +60,7 @@ export class S3WrapperFiles {
     return this.deleteFiles(bucket, files);
   }
 
-  public uploadFile(
-      bucket: string,
-      file: string,
-      folderName?: string,
-      options?: UploadOptionsBasic) {
+  public uploadFile(bucket: string, file: string, folderName?: string, options?: UploadOptionsBasic) {
     return new Promise<SendData>(async (resolve, reject) => {
       const name = path.basename(file);
       const destination = [folderName, name].filter(Boolean).join('/');
@@ -75,7 +72,9 @@ export class S3WrapperFiles {
         } else if (options.expire) {
           const [, value, unit] = /(\d+)(\w+)/.exec(options.expire) || [];
           if (value !== undefined && unit) {
-            expire = dayjs().add(+value, unit as OpUnitType).toDate();
+            expire = dayjs()
+              .add(+value, unit as OpUnitType)
+              .toDate();
           }
         }
         if (options.create && this.s3Buckets) {
@@ -110,12 +109,7 @@ export class S3WrapperFiles {
     });
   }
 
-  public async uploadFiles(
-      bucket: string,
-      files: string | string[],
-      folderName?: string,
-      options: UploadOptions = {}
-  ) {
+  public async uploadFiles(bucket: string, files: string | string[], folderName?: string, options: UploadOptions = {}) {
     const { compress, replace, create, expire, expireDate } = options;
     if (!Array.isArray(files)) {
       files = [files];
@@ -151,8 +145,8 @@ export class S3WrapperFiles {
     const limit = dayjs().subtract(+value, unit as OpUnitType);
     const files = await this.getFilesInFolder(bucket, folderName);
     const filesToDelete = files
-        .filter((file) => !!file.LastModified && dayjs(file.LastModified).isBefore(limit))
-        .map((file) => ({ Key: file.Key })) as ObjectIdentifierList;
+      .filter((file) => !!file.LastModified && dayjs(file.LastModified).isBefore(limit))
+      .map((file) => ({ Key: file.Key })) as ObjectIdentifierList;
     return this.deleteFiles(bucket, filesToDelete);
   }
 
@@ -164,7 +158,8 @@ export class S3WrapperFiles {
     const database = Config.MYSQL_DATABASE;
     if (!user || !password || !database) {
       throw new Error(
-          `${Config.TAG} Error in mysql-dump environment variables not defined: $MYSQL_USER, $MYSQL_PASSWORD, $MYSQL_DATABASE, $MYSQL_HOST, $MYSQL_PORT`);
+        `${Config.TAG} Error in mysql-dump environment variables not defined: $MYSQL_USER, $MYSQL_PASSWORD, $MYSQL_DATABASE, $MYSQL_HOST, $MYSQL_PORT`
+      );
     }
     return mysqldump({
       connection: {
@@ -179,15 +174,15 @@ export class S3WrapperFiles {
       const fileDest = path.join(folder, `mysqldump-${dayjs().format('YYYY-MM-DD.HHmmss')}.sql`);
       FileUtils.mkdirp(path.dirname(fileDest));
       const content = Object.values(dump)
-          .map((result) => result && result.replace(/^# /gm, '-- '))
-          .join('\n\n');
+        .map((result) => result && result.replace(/^# /gm, '-- '))
+        .join('\n\n');
       fs.writeFileSync(fileDest, content);
       return fileDest;
     });
   }
 
   private deleteFiles(bucket: string, files: ObjectIdentifierList) {
-    return new Promise<DeleteObjectOutput>(async (resolve, reject) => {
+    return new Promise<DeleteObjectOutput>((resolve, reject) => {
       const filesToDelete: Delete = { Objects: files.filter((f) => !!f.Key) };
       this.s3Sdk.deleteObjects({ Bucket: bucket, Delete: filesToDelete }, (error, data) => {
         if (error) {
