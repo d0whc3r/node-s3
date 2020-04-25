@@ -28,7 +28,15 @@ install-deps:
     - yarn build
 
 tests:
+  image: d0whc3r/minio-nodejs:latest
   stage: test
+  variables:
+    MINIO_ACCESS_KEY: "access-mock-key"
+    MINIO_SECRET_KEY: "secret-mock-key"
+    MINIO_PORT_NUMBER: 9000
+    ENDPOINT: "http://localhost:9000"
+    ACCESS_KEY: "access-mock-key"
+    SECRET_KEY: "secret-mock-key"
   script:
     - yarn test:coverage
     - yarn test:send-coverages
