@@ -33,6 +33,19 @@ export async function clearBucket(bucket: string) {
     await new S3Wrapper({ bucket }).removeBucket(true);
     console.log(`Deleted temporal test bucket "${bucket}"`);
   } catch (e) {
-    console.warn(`Error on delete temporal test bucket "${bucket}"`, e);
+    console.log(`Error on delete temporal test bucket "${bucket}"`, e);
   }
+}
+
+/**
+ * Wait function
+ * @param {number} timeInSecs
+ * @returns {Promise<unknown>}
+ */
+export function wait(timeInSecs: number) {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(true);
+    }, timeInSecs * 1000);
+  });
 }

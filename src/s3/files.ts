@@ -1,4 +1,4 @@
-import S3, { Delete, DeleteObjectOutput, GetObjectOutput, ObjectIdentifierList } from 'aws-sdk/clients/s3';
+import S3, { Delete, DeleteObjectsOutput, GetObjectOutput, ObjectIdentifierList, ObjectList } from 'aws-sdk/clients/s3';
 import { S3WrapperBuckets } from './buckets';
 import { UploadOptions, UploadOptionsBasic } from '../types';
 import path from 'path';
@@ -16,18 +16,20 @@ import SendData = ManagedUpload.SendData;
 
 export class S3WrapperFiles {
   private s3Buckets?: S3WrapperBuckets;
+  private defaultUploadOptions: UploadOptionsBasic = { create: true, replace: false };
 
-  constructor(private s3Sdk: S3) {}
+  constructor(private s3Sdk: S3) {
+  }
 
   public setBucketWrapper(s3Buckets: S3WrapperBuckets) {
     this.s3Buckets = s3Buckets;
   }
 
   public getFiles(bucket: string) {
-    return new Promise<Record<string, any>[]>((resolve, reject) => {
+    return new Promise<ObjectList>((resolve, reject) => {
       this.s3Sdk.listObjects({ Bucket: bucket }, (error, data) => {
         if (error) {
-          reject(error);
+          reject(error.message);
         } else {
           resolve(data.Contents || []);
         }
@@ -39,7 +41,7 @@ export class S3WrapperFiles {
     return new Promise<GetObjectOutput>((resolve, reject) => {
       this.s3Sdk.getObject({ Bucket: bucket, Key: name }, (error, data) => {
         if (error) {
-          reject(error);
+          reject(error.message);
         } else {
           resolve(data);
         }
@@ -66,28 +68,27 @@ export class S3WrapperFiles {
       const destination = [folderName, name].filter(Boolean).join('/');
       const mimeType = mime.contentType(name) || undefined;
       let expire: Date | undefined;
-      if (options) {
-        if (options.expireDate) {
-          expire = options.expireDate;
-        } else if (options.expire) {
-          const [, value, unit] = /(\d+)(\w+)/.exec(options.expire) || [];
-          if (value !== undefined && unit) {
-            expire = dayjs()
-              .add(+value, unit as OpUnitType)
-              .toDate();
-          }
+      const opts = { ...this.defaultUploadOptions, ...(options || {}) };
+      if (opts.expireDate) {
+        expire = opts.expireDate;
+      } else if (opts.expire) {
+        const [, value, unit] = /(\d+)(\w+)/.exec(opts.expire) || [];
+        if (value !== undefined && unit) {
+          expire = dayjs()
+            .add(+value, unit as OpUnitType)
+            .toDate();
         }
-        if (options.create && this.s3Buckets) {
-          const exist = await this.s3Buckets.bucketExist(bucket);
-          if (!exist) {
-            await this.s3Buckets.createBucket(bucket);
-          }
+      }
+      if (opts.create && this.s3Buckets) {
+        const exist = await this.s3Buckets.bucketExist(bucket);
+        if (!exist) {
+          await this.s3Buckets.createBucket(bucket);
         }
-        if (!options.replace) {
-          const exist = await this.fileExist(bucket, destination);
-          if (exist) {
-            throw new Error(`${Config.TAG} File "${destination}" already exists in bucket "${bucket}" and will not be replaced`);
-          }
+      }
+      if (!opts.replace) {
+        const exist = await this.fileExist(bucket, destination);
+        if (exist) {
+          reject(Error(`${Config.TAG} File "${destination}" already exists in bucket "${bucket}" and will not be replaced`));
         }
       }
       const readStream = fs.createReadStream(file);
@@ -101,7 +102,7 @@ export class S3WrapperFiles {
       this.s3Sdk.upload(params, (error, data) => {
         readStream.destroy();
         if (error) {
-          reject(error);
+          reject(error.message);
         } else {
           resolve(data);
         }
@@ -123,15 +124,16 @@ export class S3WrapperFiles {
       const result = await this.compressFiles(files, zipName);
       uploadFiles = [result];
     }
-    const result: { [filename: string]: SendData } = {};
+    let result: { [filename: string]: SendData } = {};
     for (const file of uploadFiles) {
       if (file.includes('*')) {
-        await this.uploadFiles(bucket, glob.sync(file), folderName, options);
+        const response = await this.uploadFiles(bucket, glob.sync(file), folderName, options);
+        result = { ...result, ...response };
       } else if (fs.lstatSync(file).isDirectory()) {
-        await this.uploadFiles(bucket, glob.sync(`${file}/*`), folderName, options);
+        const response = await this.uploadFiles(bucket, glob.sync(`${file}/*`), folderName, options);
+        result = { ...result, ...response };
       } else {
-        const filename = path.basename(file);
-        result[filename] = await this.uploadFile(bucket, file, folderName, { replace, create, expireDate, expire });
+        result[file] = await this.uploadFile(bucket, file, folderName, { replace, create, expireDate, expire });
       }
     }
     return result;
@@ -182,11 +184,11 @@ export class S3WrapperFiles {
   }
 
   private deleteFiles(bucket: string, files: ObjectIdentifierList) {
-    return new Promise<DeleteObjectOutput>((resolve, reject) => {
+    return new Promise<DeleteObjectsOutput>((resolve, reject) => {
       const filesToDelete: Delete = { Objects: files.filter((f) => !!f.Key) };
       this.s3Sdk.deleteObjects({ Bucket: bucket, Delete: filesToDelete }, (error, data) => {
         if (error) {
-          reject(error);
+          reject(error.message);
         } else {
           const { Deleted } = data;
           if (Deleted && Deleted.length) {
@@ -217,10 +219,10 @@ export class S3WrapperFiles {
         output.destroy();
       });
 
-      output.on('end', () => {
-        resolve(fileDest);
-        output.destroy();
-      });
+      // output.on('end', () => {
+      //   resolve(fileDest);
+      //   output.destroy();
+      // });
 
       archive.on('warning', (err) => {
         console.warn(`${Config.TAG} Warning compressing file`, err);

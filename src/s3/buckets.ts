@@ -4,7 +4,8 @@ import { S3WrapperFiles } from './files';
 export class S3WrapperBuckets {
   private s3Files?: S3WrapperFiles;
 
-  constructor(private s3Sdk: S3) {}
+  constructor(private s3Sdk: S3) {
+  }
 
   public setFileWrapper(s3Files: S3WrapperFiles) {
     this.s3Files = s3Files;
@@ -14,7 +15,7 @@ export class S3WrapperBuckets {
     return new Promise<Bucket[]>((resolve, reject) => {
       this.s3Sdk.listBuckets((error, data) => {
         if (error) {
-          reject(error);
+          reject(error.message);
         } else {
           resolve(data.Buckets || []);
         }
@@ -26,7 +27,7 @@ export class S3WrapperBuckets {
     return new Promise<CreateBucketOutput>((resolve, reject) => {
       this.s3Sdk.createBucket({ Bucket: bucket }, (error, data) => {
         if (error) {
-          reject(error);
+          reject(error.message);
         } else {
           resolve(data);
         }
@@ -46,7 +47,7 @@ export class S3WrapperBuckets {
               })
               .catch(reject);
           } else {
-            reject(error);
+            reject(error.message);
           }
         } else {
           resolve(true);

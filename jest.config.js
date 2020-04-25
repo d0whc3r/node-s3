@@ -5,7 +5,7 @@ module.exports = {
   },
   testMatch: ['**/tests/**/*.spec.(js|jsx|ts|tsx)', '**/__tests__/*.(js|jsx|ts|tsx)'],
   testURL: 'http://localhost/',
-  collectCoverage: true,
+  collectCoverage: false,
   coverageDirectory: 'coverage',
   collectCoverageFrom: ['src/**/*.ts'],
   cache: false,
@@ -16,8 +16,15 @@ module.exports = {
   testEnvironment: 'node',
   globals: {
     'ts-jest': {
-      tsConfig: 'tsconfig.json',
+      // tsConfig: 'tsconfig.json',
+      tsConfig: {
+        sourceMap: true,
+        inlineSourceMap: true
+      },
       diagnostics: true
     }
+    // 'ts-jest': {
+    //   babelConfig: false,
+    // },
   }
 };
