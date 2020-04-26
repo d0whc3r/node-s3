@@ -5,6 +5,7 @@ bin
 src/test.ts
 files
 .yarn-cache
+/.codacy-coverage
 
 # Logs
 /logs
