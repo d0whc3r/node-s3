@@ -38,7 +38,7 @@ jobs:
     - run: yarn test:coverage
       env:
         CI: true
-        ENDPOINT: "http://minio:9000"
+        ENDPOINT: "http://localhost:9000"
         ACCESS_KEY: "access-mock-key"
         SECRET_KEY: "secret-mock-key"
 
