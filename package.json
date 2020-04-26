@@ -9,7 +9,7 @@
   },
   "repository": "https://github.com/d0whc3r/node-s3.git",
   "bin": {
-    "s3node": "./bin/cli.js"
+    "node-s3": "./bin/cli.js"
   },
   "files": [
     "dist",
