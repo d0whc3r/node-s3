@@ -61,6 +61,7 @@
     "dayjs": "1.8.25",
     "glob": "7.1.6",
     "mime-types": "2.1.27",
+    "mkdirp": "1.0.4",
     "mysqldump": "3.1.0"
   },
   "devDependencies": {
@@ -78,6 +79,7 @@
     "@types/command-line-usage": "5.0.1",
     "@types/jest": "25.2.1",
     "@types/mime-types": "2.1.0",
+    "@types/mkdirp": "1.0.0",
     "@types/node": "13.13.2",
     "@types/rollup-plugin-node-builtins": "2.1.1",
     "@types/rollup-plugin-node-globals": "1.4.0",

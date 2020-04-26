@@ -39,7 +39,6 @@ export class S3Wrapper {
   }
 
   // BUCKETS START
-
   public getBuckets() {
     return this.s3Buckets.getBuckets();
   }
@@ -49,7 +48,7 @@ export class S3Wrapper {
     return this.s3Buckets.createBucket(this.bucket);
   }
 
-  public removeBucket(force?: boolean, bucket = this.bucket) {
+  public removeBucket(force = false, bucket = this.bucket) {
     this.checkBucket(bucket);
     return this.s3Buckets.removeBucket(bucket, force);
   }
@@ -59,14 +58,9 @@ export class S3Wrapper {
     return this.s3Files.getFiles(bucket);
   }
 
-  // private bucketExist(bucket = this.bucket) {
-  //   return this.s3Buckets.bucketExist(bucket);
-  // }
-
   // BUCKETS END
 
   // FILES START
-
   public uploadFile(file: string, folderName?: string, options?: UploadOptionsBasic, bucket = this.bucket) {
     this.checkBucket(bucket);
     return this.s3Files.uploadFile(bucket, file, folderName, options);
@@ -81,14 +75,6 @@ export class S3Wrapper {
     this.checkBucket(bucket);
     return this.s3Files.deleteAllContent(bucket);
   }
-
-  // public fileExist(bucket = this.bucket, name: string) {
-  //   return this.s3Files.fileExist(bucket,name);
-  // }
-
-  // public fileInfo(bucket = this.bucket, name: string) {
-  //   return this.s3Files.fileInfo(bucket, name);
-  // }
 
   public cleanOlder(timeSpace: string, folderName?: string, bucket = this.bucket) {
     this.checkBucket(bucket);

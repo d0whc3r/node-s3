@@ -6,7 +6,7 @@ import mime from 'mime-types';
 import dayjs, { OpUnitType } from 'dayjs';
 import fs, { ReadStream } from 'fs';
 import os from 'os';
-import FileUtils from '../file.utils';
+import mkdirp from 'mkdirp';
 import archiver from 'archiver';
 import { Config } from '../config';
 import glob from 'glob';
@@ -16,9 +16,9 @@ import SendData = ManagedUpload.SendData;
 
 export class S3WrapperFiles {
   private s3Buckets?: S3WrapperBuckets;
-  private defaultUploadOptions: UploadOptionsBasic = { create: true, replace: false };
+  private readonly defaultUploadOptions: UploadOptionsBasic = { create: true, replace: false };
 
-  constructor(private s3Sdk: S3) {
+  constructor(private readonly s3Sdk: S3) {
   }
 
   public setBucketWrapper(s3Buckets: S3WrapperBuckets) {
@@ -67,29 +67,12 @@ export class S3WrapperFiles {
       const name = path.basename(file);
       const destination = [folderName, name].filter(Boolean).join('/');
       const mimeType = mime.contentType(name) || undefined;
-      let expire: Date | undefined;
       const opts = { ...this.defaultUploadOptions, ...(options || {}) };
-      if (opts.expireDate) {
-        expire = opts.expireDate;
-      } else if (opts.expire) {
-        const [, value, unit] = /(\d+)(\w+)/.exec(opts.expire) || [];
-        if (value !== undefined && unit) {
-          expire = dayjs()
-            .add(+value, unit as OpUnitType)
-            .toDate();
-        }
-      }
-      if (opts.create && this.s3Buckets) {
-        const exist = await this.s3Buckets.bucketExist(bucket);
-        if (!exist) {
-          await this.s3Buckets.createBucket(bucket);
-        }
-      }
-      if (!opts.replace) {
-        const exist = await this.fileExist(bucket, destination);
-        if (exist) {
-          reject(Error(`${Config.TAG} File "${destination}" already exists in bucket "${bucket}" and will not be replaced`));
-        }
+      const expire = this.getExpire(opts);
+      await this.createIfNeeded(opts, bucket);
+      const replaced = await this.canBeReplaced(opts, bucket, destination);
+      if (!replaced) {
+        return reject(Error(`${Config.TAG} File "${destination}" already exists in bucket "${bucket}" and will not be replaced`));
       }
       const readStream = fs.createReadStream(file);
       const params: S3.Types.PutObjectRequest = {
@@ -140,11 +123,8 @@ export class S3WrapperFiles {
   }
 
   public async cleanOlder(bucket: string, timeSpace: string, folderName?: string) {
-    const [, value, unit] = /(\d+)(\w+)/.exec(timeSpace) || [];
-    if (value === undefined || !unit) {
-      throw new Error(`${Config.TAG} Unknown time definition`);
-    }
-    const limit = dayjs().subtract(+value, unit as OpUnitType);
+    const { value, unit } = this.getTimeSpace(timeSpace);
+    const limit = dayjs().subtract(value, unit as OpUnitType);
     const files = await this.getFilesInFolder(bucket, folderName);
     const filesToDelete = files
       .filter((file) => !!file.LastModified && dayjs(file.LastModified).isBefore(limit))
@@ -174,13 +154,53 @@ export class S3WrapperFiles {
     }).then(({ dump }) => {
       const folder = os.tmpdir();
       const fileDest = path.join(folder, `mysqldump-${dayjs().format('YYYY-MM-DD.HHmmss')}.sql`);
-      FileUtils.mkdirp(path.dirname(fileDest));
+      mkdirp.sync(path.dirname(fileDest));
       const content = Object.values(dump)
         .map((result) => result && result.replace(/^# /gm, '-- '))
         .join('\n\n');
       fs.writeFileSync(fileDest, content);
       return fileDest;
     });
+  }
+
+  private async canBeReplaced(opts: UploadOptionsBasic, bucket: string, destination: string) {
+    if (!opts.replace) {
+      const exist = await this.fileExist(bucket, destination);
+      if (exist) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private async createIfNeeded(opts: UploadOptionsBasic, bucket: string) {
+    if (opts.create && this.s3Buckets) {
+      const exist = await this.s3Buckets.bucketExist(bucket);
+      if (!exist) {
+        await this.s3Buckets.createBucket(bucket);
+      }
+    }
+  }
+
+  private getExpire(opts: UploadOptionsBasic) {
+    let expire: Date | undefined;
+    if (opts.expireDate) {
+      expire = opts.expireDate;
+    } else if (opts.expire) {
+      const { value, unit } = this.getTimeSpace(opts.expire);
+      expire = dayjs()
+        .add(+value, unit as OpUnitType)
+        .toDate();
+    }
+    return expire;
+  }
+
+  private getTimeSpace(timeSpace: string) {
+    const [, value, unit] = /(\d+)(\w+)/.exec(timeSpace) || [];
+    if (value === undefined || !unit) {
+      throw new Error(`${Config.TAG} Unknown time definition`);
+    }
+    return { value: +value, unit };
   }
 
   private deleteFiles(bucket: string, files: ObjectIdentifierList) {
@@ -208,7 +228,7 @@ export class S3WrapperFiles {
     return new Promise((resolve, reject) => {
       const folder = os.tmpdir();
       const fileDest = path.resolve(folder, outputName);
-      FileUtils.mkdirp(path.dirname(fileDest));
+      mkdirp.sync(path.dirname(fileDest));
       const output = fs.createWriteStream(fileDest);
       const readStreams: ReadStream[] = [];
       const archive = archiver('zip', {
@@ -218,11 +238,6 @@ export class S3WrapperFiles {
         resolve(fileDest);
         output.destroy();
       });
-
-      // output.on('end', () => {
-      //   resolve(fileDest);
-      //   output.destroy();
-      // });
 
       archive.on('warning', (err) => {
         console.warn(`${Config.TAG} Warning compressing file`, err);

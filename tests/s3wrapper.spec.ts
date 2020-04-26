@@ -59,6 +59,23 @@ describe('s3 tests', () => {
       expect(list).toBeDefined().not.toBeEmpty().toBeArray();
       expect(list.find((l) => l.Name === bucketName)).toBeDefined();
     });
+    it('create existing bucket', (done) => {
+      expect.assertions(1);
+      s3Wrapper.createBucket(s3Wrapper.bucket)
+        .catch((err) => {
+          expect(err).toBeDefined();
+          done();
+        });
+    });
+    it('remove bucket with content', async (done) => {
+      expect.assertions(1);
+      await s3Wrapper.uploadFile(SAMPLE_FILE1)
+      s3Wrapper.removeBucket(false, s3Wrapper.bucket)
+        .catch((err) => {
+          expect(err).toBeDefined();
+          done();
+        });
+    })
   });
 
   describe('file tests', () => {
