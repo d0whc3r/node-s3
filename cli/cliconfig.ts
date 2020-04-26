@@ -110,7 +110,7 @@ try {
 }
 
 if (cliOptions.help || !Object.keys(cliOptions).length) {
-  const ex = 's3node';
+  const ex = 'node-s3';
   const baseExec = `${ex} -e http://s3.eu-central-1.amazonaws.com --bucket sample`;
   const sections: Section[] = [
     {
