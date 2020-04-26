@@ -1,5 +1,7 @@
 FROM node:12 AS builder
 
+ENV NODE_OPTIONS "--max_old_space_size=2048"
+
 COPY package.json yarn.lock tsconfig.json rollup.config.js /app/
 WORKDIR /app
 
@@ -8,15 +10,12 @@ COPY src/ /app/src
 COPY cli/ /app/cli
 RUN yarn build
 
-FROM node:12
+FROM bitnami/minideb
 
-ENV ACCESS_KEY=""
-ENV SECRET_KEY=""
+ENV ACCESS_KEY ""
+ENV SECRET_KEY ""
 
-COPY package.json yarn.lock /app/
-COPY --from=builder /app/bin/cli.js /app/bin/cli.js
-WORKDIR /app
+COPY --from=builder /app/node-s3 /app/node-s3
+RUN chmod +x /app/node-s3
 
-RUN yarn install --prod --pure-lockfile
-
-ENTRYPOINT ["node", "/app/bin/cli.js"]
+ENTRYPOINT ["/app/node-s3"]

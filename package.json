@@ -38,8 +38,13 @@
     "build:clean": "rimraf dist bin",
     "build:dist": "rollup -c",
     "build:dts": "dts-bundle-generator -o dist/index.d.ts src/index.ts --umd-module-name=s3",
-    "copy:dts": "cp src/main.d.ts dist/index.d.ts",
-    "build": "yarn build:clean && yarn build:dist & yarn build:dts",
+    "build:pkg": "pkg -t node12-linux-x64 -o node-s3 bin/cli.js",
+    "build:pkg:windows": "pkg -t node12-win-x64 -o node-s3.exe bin/cli.js",
+    "build:pkg:macos": "pkg -t node12-macos-x64 -o node-s3 bin/cli.js",
+    "build:base": "yarn build:clean && yarn build:dist && yarn build:dts",
+    "build": "yarn build:base && yarn build:pkg",
+    "build:windows": "yarn build:base && yarn build:pkg:windows",
+    "build:macos": "yarn build:base && yarn build:pkg:macos",
     "test": "jest -i --verbose --colors",
     "test:fakeci": "dotenv -e test.env -- yarn test",
     "test:coverage": "yarn test --coverage",
@@ -104,6 +109,7 @@
     "jest-sonar-reporter": "2.0.0",
     "lint-staged": "10.1.7",
     "npm-run-all": "4.1.5",
+    "pkg": "4.4.8",
     "prettier": "2.0.5",
     "pretty-quick": "2.0.1",
     "regenerator-runtime": "0.13.5",
@@ -131,7 +137,7 @@
   },
   "husky": {
     "hooks": {
-      "pre-commit": "lint-staged",
+      "pre-commit": "yarn eslint:fix && lint-staged",
       "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
     }
   },
