@@ -5,9 +5,7 @@ Utility to use s3 storage using nodejs. It could upload content to s3 storage to
 
 # :eyes: Project status
 
-[![Actions Status](https://github.com/d0whc3r/node-s3/workflows/Nodejs%2010/badge.svg)](https://github.com/d0whc3r/node-s3/actions)
-[![Actions Status](https://github.com/d0whc3r/node-s3/workflows/Nodejs%2012/badge.svg)](https://github.com/d0whc3r/node-s3/actions)
-[![Actions Status](https://github.com/d0whc3r/node-s3/workflows/Nodejs%2014/badge.svg)](https://github.com/d0whc3r/node-s3/actions)
+[![Actions Status](https://github.com/d0whc3r/node-s3/workflows/Nodejs/badge.svg)](https://github.com/d0whc3r/node-s3/actions)
 [![pipeline status](https://gitlab.com/d0whc3r/node-s3/badges/master/pipeline.svg)](https://github.com/d0whc3r/node-s3)
 
 [![codecov](https://codecov.io/gh/d0whc3r/node-s3/branch/master/graph/badge.svg)](https://codecov.io/gh/d0whc3r/node-s3)
