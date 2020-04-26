@@ -13,7 +13,7 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
-    container: d0whc3r/minio-nodejs
+    container: bitnami/minio:latest
 
     strategy:
       matrix:
@@ -36,4 +36,4 @@ jobs:
         ENDPOINT: "http://localhost:9000"
         ACCESS_KEY: "access-mock-key"
         SECRET_KEY: "secret-mock-key"
-     
+

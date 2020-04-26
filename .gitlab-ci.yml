@@ -28,8 +28,9 @@ install-deps:
     - yarn build
 
 tests:
-  image: d0whc3r/minio-nodejs:latest
   stage: test
+  services:
+    - bitnami/minio:latest
   variables:
     MINIO_ACCESS_KEY: "access-mock-key"
     MINIO_SECRET_KEY: "secret-mock-key"
