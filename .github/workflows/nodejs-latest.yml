@@ -1,0 +1,40 @@
+# This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+
+name: Nodejs latest
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    container: node:latest
+    services:
+      minio:
+        image: bitnami/minio:latest
+        env:
+          MINIO_ACCESS_KEY: "access-mock-key"
+          MINIO_SECRET_KEY: "secret-mock-key"
+          MINIO_PORT_NUMBER: 9000
+        ports:
+          - 9000:9000
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: install
+      run: yarn install
+    - name: build
+      run: yarn build
+    - name: test
+      run: yarn test:coverage
+      env:
+        CI: true
+        ENDPOINT: "http://localhost:9000"
+        ACCESS_KEY: "access-mock-key"
+        SECRET_KEY: "secret-mock-key"
+
