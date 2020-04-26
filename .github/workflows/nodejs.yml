@@ -13,7 +13,13 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
-    container: bitnami/minio:latest
+    services:
+      minio:
+        image: bitnami/minio:latest
+        env:
+          MINIO_ACCESS_KEY: "access-mock-key"
+          MINIO_SECRET_KEY: "secret-mock-key"
+          MINIO_PORT_NUMBER: 9000
 
     strategy:
       matrix:
@@ -30,9 +36,6 @@ jobs:
     - run: /opt/bitnami/scripts/minio/run.sh & yarn test:coverage
       env:
         CI: true
-        MINIO_ACCESS_KEY: "access-mock-key"
-        MINIO_SECRET_KEY: "secret-mock-key"
-        MINIO_PORT_NUMBER: 9000
         ENDPOINT: "http://localhost:9000"
         ACCESS_KEY: "access-mock-key"
         SECRET_KEY: "secret-mock-key"
