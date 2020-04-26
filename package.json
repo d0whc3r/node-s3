@@ -46,7 +46,7 @@
     "test:send-coverages": "yarn coverage:codecovs && yarn coverage:coveralls && yarn coverage:codacy",
     "coverage:codecovs": "curl -s https://codecov.io/bash | bash",
     "coverage:coveralls": "cat ./coverage/lcov.info | coveralls",
-    "coverage:codacy": "curl -Ls https://coverage.codacy.com/get.sh -- report -l typescript -r coverage/lcov.info | bash",
+    "coverage:codacy": "wget -q https://coverage.codacy.com/get.sh && bash get.sh report -l typescript -r coverage/lcov.info",
     "postversion": "git push --follow-tags",
     "eslint": "eslint -c .eslintrc.js --ext .ts --ext .js src cli",
     "eslint:fix": "yarn eslint --fix",
