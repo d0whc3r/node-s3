@@ -20,6 +20,8 @@ jobs:
           MINIO_ACCESS_KEY: "access-mock-key"
           MINIO_SECRET_KEY: "secret-mock-key"
           MINIO_PORT_NUMBER: 9000
+        ports:
+          - 9000:9000
 
     strategy:
       matrix:
@@ -36,7 +38,7 @@ jobs:
     - run: yarn test:coverage
       env:
         CI: true
-        ENDPOINT: "http://localhost:9000"
+        ENDPOINT: "http://minio:9000"
         ACCESS_KEY: "access-mock-key"
         SECRET_KEY: "secret-mock-key"
 
