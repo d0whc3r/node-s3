@@ -10,34 +10,8 @@ on:
     branches: [ master ]
 
 jobs:
-  install:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [10.x]
-    steps:
-      - uses: actions/checkout@v2
-        name: Use Node.js ${{ matrix.node-version }}
-        with:
-          node-version: ${{ matrix.node-version }}
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
-        with:
-          node-version: ${{ matrix.node-version }}
-      - name: install
-        run: yarn install
-
   build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
-        with:
-          node-version: ${{ matrix.node-version }}
-      - name: build
-        run: yarn install
 
-  test:
     runs-on: ubuntu-latest
     services:
       minio:
@@ -48,18 +22,25 @@ jobs:
           MINIO_PORT_NUMBER: 9000
         ports:
           - 9000:9000
-        options: --health-cmd "curl localhost:9000" --health-interval 10s --health-timeout 5s --health-retries 10
+
+    strategy:
+      matrix:
+        node-version: [10.x]
+
     steps:
-      - name: Setup Node.js ${{ matrix.node-version }}
+      - uses: actions/checkout@v2
+      - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node-version }}
+      - name: install
+        run: yarn install
+      - name: build
+        run: yarn build
       - name: test
-        run: yarn test
+        run: yarn test:coverage
         env:
           CI: true
           ENDPOINT: "http://localhost:9000"
           ACCESS_KEY: "access-mock-key"
           SECRET_KEY: "secret-mock-key"
-
-
