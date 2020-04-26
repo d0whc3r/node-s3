@@ -147,7 +147,7 @@ module.exports = {
     'prefer-const': 2,
     radix: 2,
     'no-shadowed-variable': 0,
-    'max-params': [2, 3]
+    'max-params': [2, 4]
   },
   settings: {
     'import/parsers': {

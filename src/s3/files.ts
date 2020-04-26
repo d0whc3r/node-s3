@@ -18,8 +18,7 @@ export class S3WrapperFiles {
   private s3Buckets?: S3WrapperBuckets;
   private readonly defaultUploadOptions: UploadOptionsBasic = { create: true, replace: false };
 
-  constructor(private readonly s3Sdk: S3) {
-  }
+  constructor(private readonly s3Sdk: S3) {}
 
   public setBucketWrapper(s3Buckets: S3WrapperBuckets) {
     this.s3Buckets = s3Buckets;
@@ -62,15 +61,23 @@ export class S3WrapperFiles {
     return this.deleteFiles(bucket, files);
   }
 
-  public uploadFile(bucket: string, file: string, folderName?: string, options?: UploadOptionsBasic) {
-    return new Promise<SendData>(async (resolve, reject) => {
+  public async uploadFile(bucket: string, file: string, folderName?: string, options?: UploadOptionsBasic) {
+    let destination: string;
+    let mimeType: string | undefined;
+    let expire: Date | undefined;
+    let replaced: boolean;
+    try {
       const name = path.basename(file);
-      const destination = [folderName, name].filter(Boolean).join('/');
-      const mimeType = mime.contentType(name) || undefined;
+      destination = [folderName, name].filter(Boolean).join('/');
+      mimeType = mime.contentType(name) || undefined;
       const opts = { ...this.defaultUploadOptions, ...(options || {}) };
-      const expire = this.getExpire(opts);
+      expire = this.getExpire(opts);
       await this.createIfNeeded(opts, bucket);
-      const replaced = await this.canBeReplaced(opts, bucket, destination);
+      replaced = await this.canBeReplaced(opts, bucket, destination);
+    } catch (e) {
+      return Promise.reject(e);
+    }
+    return new Promise<SendData>((resolve, reject) => {
       if (!replaced) {
         return reject(Error(`${Config.TAG} File "${destination}" already exists in bucket "${bucket}" and will not be replaced`));
       }

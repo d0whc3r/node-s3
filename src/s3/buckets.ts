@@ -4,8 +4,7 @@ import { S3WrapperFiles } from './files';
 export class S3WrapperBuckets {
   private s3Files?: S3WrapperFiles;
 
-  constructor(private readonly s3Sdk: S3) {
-  }
+  constructor(private readonly s3Sdk: S3) {}
 
   public setFileWrapper(s3Files: S3WrapperFiles) {
     this.s3Files = s3Files;
