@@ -5,11 +5,14 @@ Utility to use s3 storage using nodejs. It could upload content to s3 storage to
 
 # :eyes: Project status
 
-[![Actions Status](https://github.com/d0whc3r/node-s3/workflows/Node.js%20CI/badge.svg)](https://github.com/d0whc3r/node-s3/actions)
+[![Actions Status](https://github.com/d0whc3r/node-s3/workflows/Nodejs%2010/badge.svg)](https://github.com/d0whc3r/node-s3/actions)
+[![Actions Status](https://github.com/d0whc3r/node-s3/workflows/Nodejs%2012/badge.svg)](https://github.com/d0whc3r/node-s3/actions)
+[![Actions Status](https://github.com/d0whc3r/node-s3/workflows/Nodejs%20latest/badge.svg)](https://github.com/d0whc3r/node-s3/actions)
 [![pipeline status](https://gitlab.com/d0whc3r/node-s3/badges/master/pipeline.svg)](https://github.com/d0whc3r/node-s3)
-[![codecov](https://codecov.io/gh/d0whc3r/node-s3/branch/master/graph/badge.svg)](https://codecov.io/gh/d0whc3r/node-s3)
 
+[![codecov](https://codecov.io/gh/d0whc3r/node-s3/branch/master/graph/badge.svg)](https://codecov.io/gh/d0whc3r/node-s3)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/0ff5030a11234255a13694d619b5bcf6)](https://www.codacy.com/manual/d0whc3r/node-s3?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=d0whc3r/node-s3&amp;utm_campaign=Badge_Grade)
+
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=d0whc3r_node-s3&metric=alert_status)](https://sonarcloud.io/dashboard?id=d0whc3r_node-s3)
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=d0whc3r_node-s3&metric=sqale_rating)](https://sonarcloud.io/dashboard?id=d0whc3r_node-s3)
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=d0whc3r_node-s3&metric=security_rating)](https://sonarcloud.io/dashboard?id=d0whc3r_node-s3)
