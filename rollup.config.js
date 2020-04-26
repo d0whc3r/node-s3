@@ -105,7 +105,7 @@ export default function odpRollupConfig(options) {
     {
       ...output,
       input: 'cli/cli.ts',
-      output: [{ ...outputConfig, file: 'bin/cli.js', format: 'cjs' }]
+      output: [{ ...outputConfig, file: 'bin/cli.js', format: 'cjs', banner: '#!/usr/bin/env node' }]
     }
   ];
 }

@@ -9,7 +9,7 @@
   },
   "repository": "https://github.com/d0whc3r/node-s3.git",
   "bin": {
-    "node-s3": "ndoe ./bin/cli.js"
+    "node-s3": "./bin/cli.js"
   },
   "files": [
     "dist",
@@ -39,7 +39,7 @@
     "build:dist": "rollup -c",
     "build:dts": "dts-bundle-generator -o dist/index.d.ts src/index.ts --umd-module-name=s3",
     "copy:dts": "cp src/main.d.ts dist/index.d.ts",
-    "build": "yarn build:clean && yarn build:dist && yarn build:dts",
+    "build": "yarn build:clean && yarn build:dist & yarn build:dts",
     "test": "jest -i --verbose --colors",
     "test:fakeci": "dotenv -e test.env -- yarn test",
     "test:coverage": "yarn test --coverage",
