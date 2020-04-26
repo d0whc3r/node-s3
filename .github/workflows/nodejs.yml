@@ -33,7 +33,7 @@ jobs:
         node-version: ${{ matrix.node-version }}
     - run: yarn install
     - run: yarn build
-    - run: /opt/bitnami/scripts/minio/run.sh & yarn test:coverage
+    - run: yarn test:coverage
       env:
         CI: true
         ENDPOINT: "http://localhost:9000"

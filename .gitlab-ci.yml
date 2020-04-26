@@ -39,7 +39,8 @@ tests:
     ACCESS_KEY: "access-mock-key"
     SECRET_KEY: "secret-mock-key"
   script:
-    - /opt/bitnami/scripts/minio/run.sh & (yarn test:coverage && yarn test:send-coverages)
+    - yarn test:coverage
+    - yarn test:send-coverages
   coverage: '/All files\s*\|\s*([\d.]+)/'
   artifacts:
     paths:
