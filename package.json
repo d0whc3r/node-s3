@@ -63,7 +63,7 @@
     "colors": "1.4.0",
     "command-line-args": "5.1.1",
     "command-line-usage": "6.1.0",
-    "dayjs": "1.8.25",
+    "dayjs": "1.8.28",
     "glob": "7.1.6",
     "mime-types": "2.1.27",
     "mkdirp": "1.0.4",
