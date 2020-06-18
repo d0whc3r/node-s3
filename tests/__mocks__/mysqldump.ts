@@ -7,6 +7,7 @@ const response = {
   tables: []
 };
 
-export default () => new Promise((resolve) => {
-  resolve(response);
-});
+export default () =>
+  new Promise((resolve) => {
+    resolve(response);
+  });

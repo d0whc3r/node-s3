@@ -34,7 +34,6 @@
     "dev": "dotenv -e .env -- node -r ts-node/register -r tsconfig-paths/register src/test.ts",
     "cli:dev": "dotenv -e .env -- yarn cli",
     "cli": "node -r ts-node/register -r tsconfig-paths/register cli/cli.ts",
-    "lint": "tslint -p .",
     "build:clean": "rimraf dist bin",
     "build:dist": "rollup -c",
     "build:dts": "dts-bundle-generator -o dist/index.d.ts src/index.ts --umd-module-name=s3",

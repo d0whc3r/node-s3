@@ -61,21 +61,19 @@ describe('s3 tests', () => {
     });
     it('create existing bucket', (done) => {
       expect.assertions(1);
-      s3Wrapper.createBucket(s3Wrapper.bucket)
-        .catch((err) => {
-          expect(err).toBeDefined();
-          done();
-        });
+      s3Wrapper.createBucket(s3Wrapper.bucket).catch((err) => {
+        expect(err).toBeDefined();
+        done();
+      });
     });
     it('remove bucket with content', async (done) => {
       expect.assertions(1);
-      await s3Wrapper.uploadFile(SAMPLE_FILE1)
-      s3Wrapper.removeBucket(false, s3Wrapper.bucket)
-        .catch((err) => {
-          expect(err).toBeDefined();
-          done();
-        });
-    })
+      await s3Wrapper.uploadFile(SAMPLE_FILE1);
+      s3Wrapper.removeBucket(false, s3Wrapper.bucket).catch((err) => {
+        expect(err).toBeDefined();
+        done();
+      });
+    });
   });
 
   describe('file tests', () => {
@@ -85,60 +83,52 @@ describe('s3 tests', () => {
     });
     it('upload file', (done) => {
       expect.assertions(1);
-      s3Wrapper.uploadFile(SAMPLE_FILE1)
-        .then((response) => {
-          expect(response).toBeDefined();
-          done();
-        });
+      s3Wrapper.uploadFile(SAMPLE_FILE1).then((response) => {
+        expect(response).toBeDefined();
+        done();
+      });
     });
     it('upload file to folder', (done) => {
       expect.assertions(2);
       const file = SAMPLE_FILE1;
       const folder = 'test-folder';
       const destination = path.join(folder, path.basename(file));
-      s3Wrapper.uploadFile(SAMPLE_FILE1, folder)
-        .then((response) => {
-          expect(response)
-            .toBeDefined()
-            .toContainEntry(['Key', destination]);
-          done();
-        });
+      s3Wrapper.uploadFile(SAMPLE_FILE1, folder).then((response) => {
+        expect(response).toBeDefined().toContainEntry(['Key', destination]);
+        done();
+      });
     });
     it('upload twice a file (without replace)', async (done) => {
       expect.assertions(1);
       await s3Wrapper.uploadFile(SAMPLE_FILE1);
-      s3Wrapper.uploadFile(SAMPLE_FILE1)
-        .catch((err) => {
-          expect(err).toBeDefined();
-          done();
-        });
+      s3Wrapper.uploadFile(SAMPLE_FILE1).catch((err) => {
+        expect(err).toBeDefined();
+        done();
+      });
     });
     it('upload twice a file (with replace)', async (done) => {
       expect.assertions(1);
       await s3Wrapper.uploadFile(SAMPLE_FILE1);
-      s3Wrapper.uploadFile(SAMPLE_FILE1, undefined, { replace: true })
-        .then((response) => {
-          expect(response).toBeDefined();
-          done();
-        });
+      s3Wrapper.uploadFile(SAMPLE_FILE1, undefined, { replace: true }).then((response) => {
+        expect(response).toBeDefined();
+        done();
+      });
     });
     it('upload a file with expireDate', (done) => {
       expect.assertions(1);
       const today = new Date();
       const expireDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
-      s3Wrapper.uploadFile(SAMPLE_FILE1, undefined, { expireDate })
-        .then((response) => {
-          expect(response).toBeDefined();
-          done();
-        });
+      s3Wrapper.uploadFile(SAMPLE_FILE1, undefined, { expireDate }).then((response) => {
+        expect(response).toBeDefined();
+        done();
+      });
     });
     it('upload a file with expire', (done) => {
       expect.assertions(1);
-      s3Wrapper.uploadFile(SAMPLE_FILE1, undefined, { expire: '1d' })
-        .then((response) => {
-          expect(response).toBeDefined();
-          done();
-        });
+      s3Wrapper.uploadFile(SAMPLE_FILE1, undefined, { expire: '1d' }).then((response) => {
+        expect(response).toBeDefined();
+        done();
+      });
     });
 
     describe('create new bucket', () => {
@@ -151,19 +141,17 @@ describe('s3 tests', () => {
       });
       it('upload to a not created bucket (without create)', (done) => {
         expect.assertions(1);
-        s3Wrapper.uploadFile(SAMPLE_FILE1, undefined, { create: false })
-          .catch((error) => {
-            expect(error).toBeDefined();
-            done();
-          });
+        s3Wrapper.uploadFile(SAMPLE_FILE1, undefined, { create: false }).catch((error) => {
+          expect(error).toBeDefined();
+          done();
+        });
       });
       it('upload to a not created bucket (with create)', (done) => {
         expect.assertions(1);
-        s3Wrapper.uploadFile(SAMPLE_FILE1, undefined, { create: true })
-          .then((response) => {
-            expect(response).toBeDefined();
-            done();
-          });
+        s3Wrapper.uploadFile(SAMPLE_FILE1, undefined, { create: true }).then((response) => {
+          expect(response).toBeDefined();
+          done();
+        });
       });
     });
   });
@@ -171,103 +159,64 @@ describe('s3 tests', () => {
   describe('upload multiple files', () => {
     it('upload 2 files without compress', (done) => {
       expect.assertions(9);
-      s3Wrapper.uploadFiles([SAMPLE_FILE1, SAMPLE_FILE2], undefined, { compress: false })
-        .then((response) => {
-          const file1 = path.basename(SAMPLE_FILE1);
-          const file2 = path.basename(SAMPLE_FILE2);
-          expect(response)
-            .toBeDefined()
-            .toBeObject()
-            .toContainAllKeys([SAMPLE_FILE1, SAMPLE_FILE2]);
-          expect(response[SAMPLE_FILE1])
-            .toBeDefined()
-            .toBeObject()
-            .toContainEntry(['Key', file1]);
-          expect(response[SAMPLE_FILE2])
-            .toBeDefined()
-            .toBeObject()
-            .toContainEntry(['Key', file2]);
-          done();
-        });
+      s3Wrapper.uploadFiles([SAMPLE_FILE1, SAMPLE_FILE2], undefined, { compress: false }).then((response) => {
+        const file1 = path.basename(SAMPLE_FILE1);
+        const file2 = path.basename(SAMPLE_FILE2);
+        expect(response).toBeDefined().toBeObject().toContainAllKeys([SAMPLE_FILE1, SAMPLE_FILE2]);
+        expect(response[SAMPLE_FILE1]).toBeDefined().toBeObject().toContainEntry(['Key', file1]);
+        expect(response[SAMPLE_FILE2]).toBeDefined().toBeObject().toContainEntry(['Key', file2]);
+        done();
+      });
     });
     it('upload 2 files with compress', (done) => {
       expect.assertions(3);
-      s3Wrapper.uploadFiles([SAMPLE_FILE1, SAMPLE_FILE2], undefined, { compress: true })
-        .then((response) => {
-          expect(response)
-            .toBeDefined()
-            .toBeObject();
-          expect(Object.keys(response)).toHaveLength(1);
-          done();
-        });
+      s3Wrapper.uploadFiles([SAMPLE_FILE1, SAMPLE_FILE2], undefined, { compress: true }).then((response) => {
+        expect(response).toBeDefined().toBeObject();
+        expect(Object.keys(response)).toHaveLength(1);
+        done();
+      });
     });
     it('upload a directory without compress', (done) => {
       expect.assertions(9);
       const dir = path.dirname(SAMPLE_FILE1);
-      s3Wrapper.uploadFiles(dir, undefined, { compress: false })
-        .then((response) => {
-          const file1 = path.basename(SAMPLE_FILE1);
-          const file2 = path.basename(SAMPLE_FILE2);
-          expect(response)
-            .toBeDefined()
-            .toBeObject()
-            .toContainAllKeys([SAMPLE_FILE1, SAMPLE_FILE2]);
-          expect(response[SAMPLE_FILE1])
-            .toBeDefined()
-            .toBeObject()
-            .toContainEntry(['Key', file1]);
-          expect(response[SAMPLE_FILE2])
-            .toBeDefined()
-            .toBeObject()
-            .toContainEntry(['Key', file2]);
-          done();
-        });
+      s3Wrapper.uploadFiles(dir, undefined, { compress: false }).then((response) => {
+        const file1 = path.basename(SAMPLE_FILE1);
+        const file2 = path.basename(SAMPLE_FILE2);
+        expect(response).toBeDefined().toBeObject().toContainAllKeys([SAMPLE_FILE1, SAMPLE_FILE2]);
+        expect(response[SAMPLE_FILE1]).toBeDefined().toBeObject().toContainEntry(['Key', file1]);
+        expect(response[SAMPLE_FILE2]).toBeDefined().toBeObject().toContainEntry(['Key', file2]);
+        done();
+      });
     });
     it('upload a directory with compress', (done) => {
       expect.assertions(3);
       const dir = path.dirname(SAMPLE_FILE1);
-      s3Wrapper.uploadFiles(dir, undefined, { compress: true })
-        .then((response) => {
-          expect(response)
-            .toBeDefined()
-            .toBeObject();
-          expect(Object.keys(response)).toHaveLength(1);
-          done();
-        });
+      s3Wrapper.uploadFiles(dir, undefined, { compress: true }).then((response) => {
+        expect(response).toBeDefined().toBeObject();
+        expect(Object.keys(response)).toHaveLength(1);
+        done();
+      });
     });
     it('upload a directory wildcard without compress', (done) => {
       expect.assertions(9);
       const dir = path.dirname(SAMPLE_FILE1);
-      s3Wrapper.uploadFiles(path.join(dir, '*'), undefined, { compress: false })
-        .then((response) => {
-          const file1 = path.basename(SAMPLE_FILE1);
-          const file2 = path.basename(SAMPLE_FILE2);
-          expect(response)
-            .toBeDefined()
-            .toBeObject()
-            .toContainAllKeys([SAMPLE_FILE1, SAMPLE_FILE2]);
-          expect(response[SAMPLE_FILE1])
-            .toBeDefined()
-            .toBeObject()
-            .toContainEntry(['Key', file1]);
-          expect(response[SAMPLE_FILE2])
-            .toBeDefined()
-            .toBeObject()
-            .toContainEntry(['Key', file2]);
-          done();
-        });
+      s3Wrapper.uploadFiles(path.join(dir, '*'), undefined, { compress: false }).then((response) => {
+        const file1 = path.basename(SAMPLE_FILE1);
+        const file2 = path.basename(SAMPLE_FILE2);
+        expect(response).toBeDefined().toBeObject().toContainAllKeys([SAMPLE_FILE1, SAMPLE_FILE2]);
+        expect(response[SAMPLE_FILE1]).toBeDefined().toBeObject().toContainEntry(['Key', file1]);
+        expect(response[SAMPLE_FILE2]).toBeDefined().toBeObject().toContainEntry(['Key', file2]);
+        done();
+      });
     });
     it('upload a directory wildcard with compress', (done) => {
       expect.assertions(3);
       const dir = path.dirname(SAMPLE_FILE1);
-      s3Wrapper.uploadFiles(path.join(dir, '*'), undefined, { compress: true })
-        .then((response) => {
-          expect(response)
-            .toBeDefined()
-            .toBeObject();
-          expect(Object.keys(response)).toHaveLength(1);
-          done();
-        });
+      s3Wrapper.uploadFiles(path.join(dir, '*'), undefined, { compress: true }).then((response) => {
+        expect(response).toBeDefined().toBeObject();
+        expect(Object.keys(response)).toHaveLength(1);
+        done();
+      });
     });
   });
   describe('Delete older files', () => {
@@ -277,21 +226,11 @@ describe('s3 tests', () => {
       await wait(8);
       await s3Wrapper.uploadFile(SAMPLE_FILE2);
       const deleted = await s3Wrapper.cleanOlder('5s');
-      expect(deleted)
-        .toBeDefined()
-        .toBeObject()
-        .toContainAllKeys(['Deleted', 'Errors']);
-      expect(deleted.Errors)
-        .toBeEmpty();
-      expect(deleted.Deleted)
-        .toBeDefined()
-        .toBeArray()
-        .toHaveLength(2);
+      expect(deleted).toBeDefined().toBeObject().toContainAllKeys(['Deleted', 'Errors']);
+      expect(deleted.Errors).toBeEmpty();
+      expect(deleted.Deleted).toBeDefined().toBeArray().toHaveLength(2);
       const list = await s3Wrapper.getFiles();
-      expect(list)
-        .toBeDefined()
-        .toBeArray()
-        .toHaveLength(1);
+      expect(list).toBeDefined().toBeArray().toHaveLength(1);
       expect(list[0])
         .toBeDefined()
         .toBeObject()
@@ -304,21 +243,11 @@ describe('s3 tests', () => {
       await wait(8);
       await s3Wrapper.uploadFile(SAMPLE_FILE2);
       const deleted = await s3Wrapper.cleanOlder('5s', folderName);
-      expect(deleted)
-        .toBeDefined()
-        .toBeObject()
-        .toContainAllKeys(['Deleted', 'Errors']);
-      expect(deleted.Errors)
-        .toBeEmpty();
-      expect(deleted.Deleted)
-        .toBeDefined()
-        .toBeArray()
-        .toHaveLength(1);
+      expect(deleted).toBeDefined().toBeObject().toContainAllKeys(['Deleted', 'Errors']);
+      expect(deleted.Errors).toBeEmpty();
+      expect(deleted.Deleted).toBeDefined().toBeArray().toHaveLength(1);
       const list = await s3Wrapper.getFiles();
-      expect(list)
-        .toBeDefined()
-        .toBeArray()
-        .toHaveLength(2);
+      expect(list).toBeDefined().toBeArray().toHaveLength(2);
     });
   });
   it('Dump mysql as sql file', async () => {
