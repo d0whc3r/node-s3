@@ -1,5 +1,3 @@
 import { Cli } from './climodule';
 
-(async () => {
-  await new Cli().parseOptions();
-})();
+new Cli().parseOptions().then((r) => r, console.error);

@@ -220,7 +220,9 @@ export class S3WrapperFiles {
           const { Deleted } = data;
           if (Deleted && Deleted.length) {
             Deleted.forEach((f) => {
-              console.warn(`${Config.TAG} Deleted file: ${f.Key}`);
+              if (f.Key) {
+                console.warn(`${Config.TAG} Deleted file: ${f.Key}`);
+              }
             });
           } else {
             console.info(`${Config.TAG} No files deleted`);

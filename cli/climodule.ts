@@ -2,6 +2,7 @@ import { cliOptions } from './cliconfig';
 import { S3Wrapper } from '../src';
 import { Config } from '../src/config';
 import colors from 'colors';
+import { S3 } from 'aws-sdk';
 
 const theme = {
   folder: 'cyan',
@@ -21,7 +22,7 @@ export class Cli {
   async parseOptions() {
     for (const command in this.opts) {
       if (Object.prototype.hasOwnProperty.call(this.opts, command)) {
-        const args = this.opts[command];
+        const args = this.opts[command] as string | string[];
         const zip = this.opts['zip'];
         const folder = this.opts['folder'];
         const replace = this.opts['replace'];
@@ -95,7 +96,9 @@ export class Cli {
     try {
       mysqlfile = await this.s3Wrapper.createDumpFile();
     } catch (err) {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions,@typescript-eslint/no-unsafe-call
       console.error(colors.bold[theme.error](`${Config.TAG} Error mysql ${err}`));
       process.exit(-1);
     }
@@ -119,7 +122,7 @@ export class Cli {
     };
   }
 
-  private beautifulFiles(files: Record<string, any>[]) {
+  private beautifulFiles(files: S3.ObjectList) {
     const parsed = files.map((file) => file.Key);
     parsed.sort();
     parsed.forEach((file) => {

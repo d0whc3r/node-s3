@@ -105,7 +105,7 @@ let cliOptions: S3Options = {};
 try {
   cliOptions = commandLineArgs(optionDefinitions);
 } catch (e) {
-  console.error('[-] Error:', e.message);
+  console.error('[-] Error:', (e as Error)['message']);
   process.exit(1);
 }
 
