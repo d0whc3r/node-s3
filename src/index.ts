@@ -1,8 +1,9 @@
-import S3, { ClientConfiguration } from 'aws-sdk/clients/s3';
+import { ClientConfiguration } from 'aws-sdk/clients/s3';
 import { S3WrapperBuckets } from './s3/buckets';
 import { S3WrapperFiles } from './s3/files';
 import { S3Config, UploadOptions, UploadOptionsBasic } from './types';
 import { Config } from './config';
+import { S3 } from 'aws-sdk';
 
 export class S3Wrapper {
   public bucket = '';

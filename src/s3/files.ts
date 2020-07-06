@@ -1,4 +1,4 @@
-import S3, { Delete, DeleteObjectsOutput, GetObjectOutput, ObjectIdentifierList, ObjectList } from 'aws-sdk/clients/s3';
+import { Delete, DeleteObjectsOutput, GetObjectOutput, ObjectIdentifierList, ObjectList } from 'aws-sdk/clients/s3';
 import { S3WrapperBuckets } from './buckets';
 import { UploadOptions, UploadOptionsBasic } from '../types';
 import path from 'path';
@@ -12,7 +12,7 @@ import { Config } from '../config';
 import glob from 'glob';
 import { ManagedUpload } from 'aws-sdk/lib/s3/managed_upload';
 import mysqldump from 'mysqldump';
-import SendData = ManagedUpload.SendData;
+import { S3 } from 'aws-sdk';
 
 export class S3WrapperFiles {
   private s3Buckets?: S3WrapperBuckets;
@@ -77,7 +77,7 @@ export class S3WrapperFiles {
     } catch (e) {
       return Promise.reject(e);
     }
-    return new Promise<SendData>((resolve, reject) => {
+    return new Promise<ManagedUpload.SendData>((resolve, reject) => {
       if (!replaced) {
         return reject(Error(`${Config.TAG} File "${destination}" already exists in bucket "${bucket}" and will not be replaced`));
       }
@@ -114,7 +114,7 @@ export class S3WrapperFiles {
       const result = await this.compressFiles(files, zipName);
       uploadFiles = [result];
     }
-    let result: { [filename: string]: SendData } = {};
+    let result: { [filename: string]: ManagedUpload.SendData } = {};
     for (const file of uploadFiles) {
       if (file.includes('*')) {
         const response = await this.uploadFiles(bucket, glob.sync(file), folderName, options);
