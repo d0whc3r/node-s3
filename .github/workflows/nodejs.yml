@@ -44,4 +44,9 @@ jobs:
           ENDPOINT: "http://localhost:9000"
           ACCESS_KEY: "access-mock-key"
           SECRET_KEY: "secret-mock-key"
-
+      - name: release
+        run: yarn semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
