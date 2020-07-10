@@ -1,5 +1,12 @@
 Changelog
 
+## [1.3.7](https://github.com/d0whc3r/node-s3/compare/v1.3.6...v1.3.7) (2020-07-10)
+
+
+### Bug Fixes
+
+* **deps:** update dependency aws-sdk to v2.713.0 ([060f299](https://github.com/d0whc3r/node-s3/commit/060f299d4f35db44699aeb910d36dd55846e8ee8))
+
 ## [1.3.6](https://github.com/d0whc3r/node-s3/compare/v1.3.5...v1.3.6) (2020-07-07)
 
 
