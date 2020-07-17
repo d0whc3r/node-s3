@@ -1,5 +1,13 @@
 Changelog
 
+## [1.3.8](https://github.com/d0whc3r/node-s3/compare/v1.3.7...v1.3.8) (2020-07-17)
+
+
+### Bug Fixes
+
+* **build:** update build to output es2015 code ([2d8568b](https://github.com/d0whc3r/node-s3/commit/2d8568b2e1e598637e66044156e8961b98ba61bb))
+* **deps:** update dependencies ([adf3571](https://github.com/d0whc3r/node-s3/commit/adf3571e59c4c0bda0168fe45b192defb80786b5))
+
 ## [1.3.7](https://github.com/d0whc3r/node-s3/compare/v1.3.6...v1.3.7) (2020-07-10)
 
 
