@@ -1,3 +1,12 @@
+# Changelog
+
+## [1.3.9](https://github.com/d0whc3r/node-s3/compare/v1.3.8...v1.3.9) (2020-07-19)
+
+
+### Bug Fixes
+
+* **deps:** update dependencies ([9171526](https://github.com/d0whc3r/node-s3/commit/9171526596edd6519a751f6ab39858c696cc68a9))
+
 Changelog
 
 ## [1.3.8](https://github.com/d0whc3r/node-s3/compare/v1.3.7...v1.3.8) (2020-07-17)
