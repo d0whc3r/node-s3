@@ -104,3 +104,7 @@ Examples
   7. Delete files in "uploads" folder older than 1minute                                                        $ node-s3 -e http://s3.eu-central-1.amazonaws.com --bucket sample -f uploads -d 1m                           
   8. Generate mysql dump file zip it and upload to "mysql-backup" folder                                        $ node-s3 -e http://s3.eu-central-1.amazonaws.com --bucket sample -f mysql-backup -m -z                      
 ```
+
+## Alternatives
+
+The same interface/api using nodejs: [go-s3](https://github.com/d0whc3r/go-s3)
