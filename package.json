@@ -63,7 +63,7 @@
   },
   "dependencies": {
     "archiver": "5.0.0",
-    "aws-sdk": "2.715.0",
+    "aws-sdk": "2.718.0",
     "colors": "1.4.0",
     "command-line-args": "5.1.1",
     "command-line-usage": "6.1.0",
