@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.3.10](https://github.com/d0whc3r/node-s3/compare/v1.3.9...v1.3.10) (2020-07-23)
+
+
+### Bug Fixes
+
+* **deps:** update dependency archiver to v5 ([66beea0](https://github.com/d0whc3r/node-s3/commit/66beea0dbc5f5fec78c3ae48e1f33ae2195ec17b))
+* **deps:** update dependency aws-sdk to v2.718.0 ([c068eb8](https://github.com/d0whc3r/node-s3/commit/c068eb8b39ce98f30f77fca81e75f03d17f8eceb))
+* **deps:** update dependency dayjs to v1.8.30 ([3573f36](https://github.com/d0whc3r/node-s3/commit/3573f3680e60bd309a4760b43abe543b9ca7f4b6))
+
 ## [1.3.9](https://github.com/d0whc3r/node-s3/compare/v1.3.8...v1.3.9) (2020-07-19)
 
 
