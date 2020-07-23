@@ -107,4 +107,4 @@ Examples
 
 ## Alternatives
 
-The same interface/api using nodejs: [go-s3](https://github.com/d0whc3r/go-s3)
+The same interface/api using go (golang): [go-s3](https://github.com/d0whc3r/go-s3)
