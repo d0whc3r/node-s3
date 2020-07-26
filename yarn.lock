@@ -3558,10 +3558,10 @@ dotenv@^5.0.1:
   resolved "https://registry.yarnpkg.com/dotenv/-/dotenv-5.0.1.tgz#a5317459bd3d79ab88cff6e44057a6a3fbb1fcef"
   integrity sha512-4As8uPrjfwb7VXC+WnLCbXK7y+Ueb2B3zgNCePYfhxS1PYeaO1YTeplffTEcbfLhvFNGLAz90VvJs9yomG7bow==
 
-dts-bundle-generator@5.1.0:
-  version "5.1.0"
-  resolved "https://registry.yarnpkg.com/dts-bundle-generator/-/dts-bundle-generator-5.1.0.tgz#1d037ae40b161f56d639550c474b2d3fbee1defe"
-  integrity sha512-29wvgtNbSvm/ppsGHAB6x9yjIJuaZZ5ZKpcqtl61YlCyoEFZYCHOFI1vjqoNCFnK/6IzFP2dG9MI2CWqsTMCYA==
+dts-bundle-generator@5.3.0:
+  version "5.3.0"
+  resolved "https://registry.yarnpkg.com/dts-bundle-generator/-/dts-bundle-generator-5.3.0.tgz#f51187f7904285f3d517b392d051045ff6b32789"
+  integrity sha512-PevcqtUQDsVs1FoXNEEvBgXWP2pNXT/booL+ufNcKSynEP8l01ebI9MgamECljThi+MHyjxYEbwGx+95TvigMQ==
   dependencies:
     typescript ">=3.0.1"
     yargs "^15.3.1"
