@@ -100,12 +100,37 @@ export class S3WrapperFiles {
     });
   }
 
+  private extractBaseDir(file: string, baseDir?: string, folderName?: string) {
+    return baseDir ? path.join(folderName || '', path.relative(baseDir, file)) : folderName;
+  }
+
   public async uploadFiles(bucket: string, files: string | string[], folderName?: string, options: UploadOptions = {}) {
-    const { compress, replace, create, expire, expireDate } = options;
+    const { compress, replace, create, expire, expireDate, baseDir } = options;
     if (!Array.isArray(files)) {
       files = [files];
     }
-    let uploadFiles = files;
+    const uploadFiles = await this.getUploadFiles(compress, files);
+    let result: { [filename: string]: ManagedUpload.SendData } = {};
+    for (const file of uploadFiles) {
+      if (file.includes('*')) {
+        const dir = baseDir;
+        options.baseDir = file.replace('*', '');
+        const response = await this.uploadFiles(bucket, glob.sync(file), this.extractBaseDir(file, dir, folderName), options);
+        result = { ...result, ...response };
+      } else if (fs.lstatSync(file).isDirectory()) {
+        const dir = baseDir;
+        options.baseDir = file;
+        const response = await this.uploadFiles(bucket, glob.sync(`${file}/*`), this.extractBaseDir(file, dir, folderName), options);
+        result = { ...result, ...response };
+      } else {
+        result[file] = await this.uploadFile(bucket, file, folderName, { replace, create, expireDate, expire });
+      }
+    }
+    return result;
+  }
+
+  private async getUploadFiles(compress: string | boolean | undefined, files: string[]) {
+    let uploadFiles: string[] = [];
     if (compress) {
       let zipName = compress;
       if (typeof zipName !== 'string') {
@@ -114,19 +139,7 @@ export class S3WrapperFiles {
       const result = await this.compressFiles(files, zipName);
       uploadFiles = [result];
     }
-    let result: { [filename: string]: ManagedUpload.SendData } = {};
-    for (const file of uploadFiles) {
-      if (file.includes('*')) {
-        const response = await this.uploadFiles(bucket, glob.sync(file), folderName, options);
-        result = { ...result, ...response };
-      } else if (fs.lstatSync(file).isDirectory()) {
-        const response = await this.uploadFiles(bucket, glob.sync(`${file}/*`), folderName, options);
-        result = { ...result, ...response };
-      } else {
-        result[file] = await this.uploadFile(bucket, file, folderName, { replace, create, expireDate, expire });
-      }
-    }
-    return result;
+    return uploadFiles;
   }
 
   public async cleanOlder(bucket: string, timeSpace: string, folderName?: string) {

@@ -16,4 +16,5 @@ export interface UploadOptionsBasic {
 
 export interface UploadOptions extends UploadOptionsBasic {
   compress?: string | boolean;
+  baseDir?: string;
 }
