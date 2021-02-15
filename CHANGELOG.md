@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.13](https://github.com/d0whc3r/node-s3/compare/v1.3.12...v1.3.13) (2021-02-15)
+
+
+### Bug Fixes
+
+* **folders:** keep folder structure ([fb51c57](https://github.com/d0whc3r/node-s3/commit/fb51c57941d49d8f8dc08c16daad285f15295508)), closes [#131](https://github.com/d0whc3r/node-s3/issues/131)
+
 ## [1.3.12](https://github.com/d0whc3r/node-s3/compare/v1.3.11...v1.3.12) (2020-08-14)
 
 
