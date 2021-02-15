@@ -100,10 +100,6 @@ export class S3WrapperFiles {
     });
   }
 
-  private extractBaseDir(file: string, baseDir?: string, folderName?: string) {
-    return baseDir ? path.join(folderName || '', path.relative(baseDir, file)) : folderName;
-  }
-
   public async uploadFiles(bucket: string, files: string | string[], folderName?: string, options: UploadOptions = {}) {
     const { compress, replace, create, expire, expireDate, baseDir } = options;
     if (!Array.isArray(files)) {
@@ -127,19 +123,6 @@ export class S3WrapperFiles {
       }
     }
     return result;
-  }
-
-  private async getUploadFiles(compress: string | boolean | undefined, files: string[]) {
-    let uploadFiles: string[] = [];
-    if (compress) {
-      let zipName = compress;
-      if (typeof zipName !== 'string') {
-        zipName = `zipped_${dayjs().format('YYYY-MM-DD.HHmmss')}.zip`;
-      }
-      const result = await this.compressFiles(files, zipName);
-      uploadFiles = [result];
-    }
-    return uploadFiles;
   }
 
   public async cleanOlder(bucket: string, timeSpace: string, folderName?: string) {
@@ -181,6 +164,23 @@ export class S3WrapperFiles {
       fs.writeFileSync(fileDest, content);
       return fileDest;
     });
+  }
+
+  private extractBaseDir(file: string, baseDir?: string, folderName?: string) {
+    return baseDir ? path.join(folderName || '', path.relative(baseDir, file)) : folderName;
+  }
+
+  private async getUploadFiles(compress: string | boolean | undefined, files: string[]) {
+    let uploadFiles = files;
+    if (compress) {
+      let zipName = compress;
+      if (typeof zipName !== 'string') {
+        zipName = `zipped_${dayjs().format('YYYY-MM-DD.HHmmss')}.zip`;
+      }
+      const result = await this.compressFiles(files, zipName);
+      uploadFiles = [result];
+    }
+    return uploadFiles;
   }
 
   private async canBeReplaced(opts: UploadOptionsBasic, bucket: string, destination: string) {
