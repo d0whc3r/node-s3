@@ -14,7 +14,7 @@ module.exports = {
   },
   overrides: [
     {
-      files: ['**/*.ts'],
+      files: ['*.ts'],
       parser: '@typescript-eslint/parser',
       plugins: ['@typescript-eslint'],
       extends: [
@@ -85,19 +85,21 @@ module.exports = {
         ],
         'no-empty-function': 0,
         '@typescript-eslint/no-empty-function': 2,
-        '@typescript-eslint/no-unnecessary-type-assertion': 2
+        '@typescript-eslint/no-unnecessary-type-assertion': 2,
+        '@typescript-eslint/explicit-module-boundary-types': 0
       }
     },
     // Spec files
     {
-      files: ['**/*.spec.ts'],
+      files: ['*.spec.ts'],
       rules: {
-        '@typescript-eslint/unbound-method': 0
+        '@typescript-eslint/unbound-method': 0,
+        'sonarjs/no-identical-functions': 0
       }
     },
     // Test Files
     {
-      files: ['**/*.e2e.ts', '**/*.spec.ts'],
+      files: ['*.e2e.ts', '*.spec.ts'],
       rules: {
         'sonarjs/no-duplicate-string': 0
       },

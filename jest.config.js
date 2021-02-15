@@ -17,7 +17,7 @@ module.exports = {
   globals: {
     'ts-jest': {
       // tsConfig: 'tsconfig.json',
-      tsConfig: {
+      tsconfig: {
         sourceMap: true,
         inlineSourceMap: true
       },
