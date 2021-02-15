@@ -18,6 +18,7 @@ import path from 'path';
 const SAMPLE_FOLDER = './tests/sample';
 const SAMPLE_FILE1 = path.join(SAMPLE_FOLDER, 'sample1.txt');
 const SAMPLE_FILE2 = path.join(SAMPLE_FOLDER, 'sample2.jpg');
+const SAMPLE_FILE3 = path.join(SAMPLE_FOLDER, 'subfolder', 'sample3.txt');
 
 describe('s3 tests', () => {
   let bucketName: string;
@@ -83,7 +84,7 @@ describe('s3 tests', () => {
     });
     it('upload file', (done) => {
       expect.assertions(1);
-      s3Wrapper.uploadFile(SAMPLE_FILE1).then((response) => {
+      void s3Wrapper.uploadFile(SAMPLE_FILE1).then((response) => {
         expect(response).toBeDefined();
         done();
       });
@@ -93,7 +94,7 @@ describe('s3 tests', () => {
       const file = SAMPLE_FILE1;
       const folder = 'test-folder';
       const destination = path.join(folder, path.basename(file));
-      s3Wrapper.uploadFile(SAMPLE_FILE1, folder).then((response) => {
+      void s3Wrapper.uploadFile(SAMPLE_FILE1, folder).then((response) => {
         expect(response).toBeDefined().toContainEntry(['Key', destination]);
         done();
       });
@@ -109,7 +110,7 @@ describe('s3 tests', () => {
     it('upload twice a file (with replace)', async (done) => {
       expect.assertions(1);
       await s3Wrapper.uploadFile(SAMPLE_FILE1);
-      s3Wrapper.uploadFile(SAMPLE_FILE1, undefined, { replace: true }).then((response) => {
+      void s3Wrapper.uploadFile(SAMPLE_FILE1, undefined, { replace: true }).then((response) => {
         expect(response).toBeDefined();
         done();
       });
@@ -118,14 +119,14 @@ describe('s3 tests', () => {
       expect.assertions(1);
       const today = new Date();
       const expireDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
-      s3Wrapper.uploadFile(SAMPLE_FILE1, undefined, { expireDate }).then((response) => {
+      void s3Wrapper.uploadFile(SAMPLE_FILE1, undefined, { expireDate }).then((response) => {
         expect(response).toBeDefined();
         done();
       });
     });
     it('upload a file with expire', (done) => {
       expect.assertions(1);
-      s3Wrapper.uploadFile(SAMPLE_FILE1, undefined, { expire: '1d' }).then((response) => {
+      void s3Wrapper.uploadFile(SAMPLE_FILE1, undefined, { expire: '1d' }).then((response) => {
         expect(response).toBeDefined();
         done();
       });
@@ -137,7 +138,7 @@ describe('s3 tests', () => {
         s3Wrapper.setConfig({ endpoint: Config.ENDPOINT, bucket: alternativeBucket });
       });
       afterEach(() => {
-        clearBucket(alternativeBucket);
+        void clearBucket(alternativeBucket);
       });
       it('upload to a not created bucket (without create)', (done) => {
         expect.assertions(1);
@@ -148,7 +149,7 @@ describe('s3 tests', () => {
       });
       it('upload to a not created bucket (with create)', (done) => {
         expect.assertions(1);
-        s3Wrapper.uploadFile(SAMPLE_FILE1, undefined, { create: true }).then((response) => {
+        void s3Wrapper.uploadFile(SAMPLE_FILE1, undefined, { create: true }).then((response) => {
           expect(response).toBeDefined();
           done();
         });
@@ -159,7 +160,7 @@ describe('s3 tests', () => {
   describe('upload multiple files', () => {
     it('upload 2 files without compress', (done) => {
       expect.assertions(9);
-      s3Wrapper.uploadFiles([SAMPLE_FILE1, SAMPLE_FILE2], undefined, { compress: false }).then((response) => {
+      void s3Wrapper.uploadFiles([SAMPLE_FILE1, SAMPLE_FILE2], undefined, { compress: false }).then((response) => {
         const file1 = path.basename(SAMPLE_FILE1);
         const file2 = path.basename(SAMPLE_FILE2);
         expect(response).toBeDefined().toBeObject().toContainAllKeys([SAMPLE_FILE1, SAMPLE_FILE2]);
@@ -170,49 +171,81 @@ describe('s3 tests', () => {
     });
     it('upload 2 files with compress', (done) => {
       expect.assertions(3);
-      s3Wrapper.uploadFiles([SAMPLE_FILE1, SAMPLE_FILE2], undefined, { compress: true }).then((response) => {
+      void s3Wrapper.uploadFiles([SAMPLE_FILE1, SAMPLE_FILE2], undefined, { compress: true }).then((response) => {
         expect(response).toBeDefined().toBeObject();
         expect(Object.keys(response)).toHaveLength(1);
         done();
       });
     });
     it('upload a directory without compress', (done) => {
-      expect.assertions(9);
+      expect.assertions(21);
       const dir = path.dirname(SAMPLE_FILE1);
-      s3Wrapper.uploadFiles(dir, undefined, { compress: false }).then((response) => {
+      void s3Wrapper.uploadFiles(dir, undefined, { compress: false }).then((response) => {
         const file1 = path.basename(SAMPLE_FILE1);
         const file2 = path.basename(SAMPLE_FILE2);
-        expect(response).toBeDefined().toBeObject().toContainAllKeys([SAMPLE_FILE1, SAMPLE_FILE2]);
+        expect(response).toBeDefined().toBeObject().toContainAllKeys([SAMPLE_FILE1, SAMPLE_FILE2, SAMPLE_FILE3]);
         expect(response[SAMPLE_FILE1]).toBeDefined().toBeObject().toContainEntry(['Key', file1]);
         expect(response[SAMPLE_FILE2]).toBeDefined().toBeObject().toContainEntry(['Key', file2]);
+        expect(response[SAMPLE_FILE3])
+          .toBeDefined()
+          .toBeObject()
+          .toContainEntry(['Key', SAMPLE_FILE3.replace(dir + '/', '')]);
+        const location1 = response[SAMPLE_FILE1].Location;
+        const path1 = new URL(location1).pathname;
+        const calcPath1 = path.join('/', bucketName, path.relative(dir, SAMPLE_FILE1));
+        expect(path1).toBeDefined().toBeString().toBe(calcPath1);
+        const location2 = response[SAMPLE_FILE2].Location;
+        const path2 = new URL(location2).pathname;
+        const calcPath2 = path.join('/', bucketName, path.relative(dir, SAMPLE_FILE2));
+        expect(path2).toBeDefined().toBeString().toBe(calcPath2);
+        const location3 = response[SAMPLE_FILE3].Location;
+        const path3 = new URL(location3).pathname;
+        const calcPath3 = path.join('/', bucketName, path.relative(dir, SAMPLE_FILE3));
+        expect(path3).toBeDefined().toBeString().toBe(calcPath3);
         done();
       });
     });
     it('upload a directory with compress', (done) => {
       expect.assertions(3);
       const dir = path.dirname(SAMPLE_FILE1);
-      s3Wrapper.uploadFiles(dir, undefined, { compress: true }).then((response) => {
+      void s3Wrapper.uploadFiles(dir, undefined, { compress: true }).then((response) => {
         expect(response).toBeDefined().toBeObject();
         expect(Object.keys(response)).toHaveLength(1);
         done();
       });
     });
     it('upload a directory wildcard without compress', (done) => {
-      expect.assertions(9);
+      expect.assertions(21);
       const dir = path.dirname(SAMPLE_FILE1);
-      s3Wrapper.uploadFiles(path.join(dir, '*'), undefined, { compress: false }).then((response) => {
+      void s3Wrapper.uploadFiles(path.join(dir, '*'), undefined, { compress: false }).then((response) => {
         const file1 = path.basename(SAMPLE_FILE1);
         const file2 = path.basename(SAMPLE_FILE2);
-        expect(response).toBeDefined().toBeObject().toContainAllKeys([SAMPLE_FILE1, SAMPLE_FILE2]);
+        expect(response).toBeDefined().toBeObject().toContainAllKeys([SAMPLE_FILE1, SAMPLE_FILE2, SAMPLE_FILE3]);
         expect(response[SAMPLE_FILE1]).toBeDefined().toBeObject().toContainEntry(['Key', file1]);
         expect(response[SAMPLE_FILE2]).toBeDefined().toBeObject().toContainEntry(['Key', file2]);
+        expect(response[SAMPLE_FILE3])
+          .toBeDefined()
+          .toBeObject()
+          .toContainEntry(['Key', SAMPLE_FILE3.replace(dir + '/', '')]);
+        const location1 = response[SAMPLE_FILE1].Location;
+        const path1 = new URL(location1).pathname;
+        const calcPath1 = path.join('/', bucketName, path.relative(dir, SAMPLE_FILE1));
+        expect(path1).toBeDefined().toBeString().toBe(calcPath1);
+        const location2 = response[SAMPLE_FILE2].Location;
+        const path2 = new URL(location2).pathname;
+        const calcPath2 = path.join('/', bucketName, path.relative(dir, SAMPLE_FILE2));
+        expect(path2).toBeDefined().toBeString().toBe(calcPath2);
+        const location3 = response[SAMPLE_FILE3].Location;
+        const path3 = new URL(location3).pathname;
+        const calcPath3 = path.join('/', bucketName, path.relative(dir, SAMPLE_FILE3));
+        expect(path3).toBeDefined().toBeString().toBe(calcPath3);
         done();
       });
     });
     it('upload a directory wildcard with compress', (done) => {
       expect.assertions(3);
       const dir = path.dirname(SAMPLE_FILE1);
-      s3Wrapper.uploadFiles(path.join(dir, '*'), undefined, { compress: true }).then((response) => {
+      void s3Wrapper.uploadFiles(path.join(dir, '*'), undefined, { compress: true }).then((response) => {
         expect(response).toBeDefined().toBeObject();
         expect(Object.keys(response)).toHaveLength(1);
         done();
