@@ -69,7 +69,7 @@
     "command-line-usage": "6.1.1",
     "dayjs": "1.10.4",
     "glob": "7.1.6",
-    "mime-types": "2.1.28",
+    "mime-types": "2.1.31",
     "mkdirp": "1.0.4",
     "mysqldump": "3.2.0"
   },
