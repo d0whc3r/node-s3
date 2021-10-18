@@ -109,7 +109,7 @@
     "esbuild": "0.8.46",
     "eslint": "7.20.0",
     "eslint-config-prettier": "7.2.0",
-    "eslint-plugin-prettier": "3.3.1",
+    "eslint-plugin-prettier": "3.4.1",
     "eslint-plugin-sonarjs": "0.6.0",
     "find-node-modules": "2.1.2",
     "husky": "4.3.8",
