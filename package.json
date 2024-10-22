@@ -74,10 +74,10 @@
     "mysqldump": "3.2.0"
   },
   "devDependencies": {
-    "@babel/core": "7.12.16",
+    "@babel/core": "7.25.9",
     "@babel/plugin-syntax-import-meta": "7.10.4",
-    "@babel/plugin-transform-regenerator": "7.12.13",
-    "@babel/preset-env": "7.12.16",
+    "@babel/plugin-transform-regenerator": "7.25.9",
+    "@babel/preset-env": "7.25.9",
     "@commitlint/cli": "11.0.0",
     "@commitlint/config-conventional": "11.0.0",
     "@rollup/plugin-json": "4.1.0",
