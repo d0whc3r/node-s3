@@ -12,15 +12,6 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    services:
-      minio:
-        image: minio/minio:latest
-        env:
-          MINIO_ROOT_USER: access-mock-key
-          MINIO_ROOT_PASSWORD: secret-mock-key
-        ports:
-          - 9000:9000
-        options: --entrypoint sh -c "minio server /data"
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -36,9 +27,42 @@ jobs:
       - run: pnpm test:coverage
         env:
           CI: true
+
+  integration:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Start S3-compatible server (Chainguard MinIO)
+        run: |
+          docker run -d --name minio \
+            -p 9000:9000 \
+            -e MINIO_ROOT_USER=access-mock-key \
+            -e MINIO_ROOT_PASSWORD=secret-mock-key \
+            cgr.dev/chainguard/minio:latest server /tmp/data
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:9000/minio/health/live >/dev/null; then
+              echo "MinIO is ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs minio
+          exit 1
+      - name: Run S3 integration tests
+        run: pnpm test:integration
+        env:
+          CI: true
           ENDPOINT: http://localhost:9000
           ACCESS_KEY: access-mock-key
           SECRET_KEY: secret-mock-key
+          SSL_ENABLED: 'false'
 
   build-sea:
     needs: verify
