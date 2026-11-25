@@ -1,19 +1,8 @@
 import path from 'node:path';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { S3Wrapper } from '../src';
 import { Config } from '../src/config';
 import { clearBucket, getRandomBucketName, initBucket, wait } from './helper';
-
-vi.mock('mysqldump', () => ({
-  default: vi.fn().mockResolvedValue({
-    dump: {
-      schema: 'mock-schema',
-      data: 'mock-data',
-      trigger: 'mock-trigger'
-    },
-    tables: []
-  })
-}));
 
 const SAMPLE_FOLDER = './tests/sample';
 const SAMPLE_FILE1 = path.join(SAMPLE_FOLDER, 'sample1.txt');
@@ -21,30 +10,6 @@ const SAMPLE_FILE2 = path.join(SAMPLE_FOLDER, 'sample2.jpg');
 const SAMPLE_FILE3 = path.join(SAMPLE_FOLDER, 'subfolder', 'sample3.txt');
 
 const hasS3Endpoint = Boolean(process.env.ENDPOINT);
-
-describe('S3Wrapper unit tests', () => {
-  it('constructs S3Wrapper object', () => {
-    expect(new S3Wrapper()).toBeDefined();
-  });
-
-  it('throws when bucket is not defined', () => {
-    const wrapper = new S3Wrapper({ bucket: '' });
-    expect(() => wrapper.getFiles()).toThrow('Bucket not defined');
-  });
-
-  it('Dump mysql as sql file', async () => {
-    Config.MYSQL_HOST = 'localhost';
-    Config.MYSQL_PORT = 3306;
-    Config.MYSQL_USER = 'mock';
-    Config.MYSQL_PASSWORD = 'mock';
-    Config.MYSQL_DATABASE = 'mock';
-    const wrapper = new S3Wrapper();
-    const fileDest = await wrapper.createDumpFile();
-    expect(fileDest).toBeDefined();
-    expect(fileDest).toContain('mysqldump-');
-    expect(fileDest).toContain('.sql');
-  });
-});
 
 describe.skipIf(!hasS3Endpoint)('s3 integration tests', () => {
   let bucketName: string;

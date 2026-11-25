@@ -1,5 +1,8 @@
 name: Nodejs
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [master]

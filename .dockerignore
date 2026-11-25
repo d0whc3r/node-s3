@@ -1,6 +1,12 @@
+.git
 node_modules
 dist
 bin
+coverage
 tests
 types
+files/
+*.sql
 *.env
+node-s3
+node-s3.exe

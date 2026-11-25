@@ -1,119 +1,186 @@
-import { styleText } from 'node:util';
+import fsp from 'node:fs/promises';
+import path from 'node:path';
+import { Readable } from 'node:stream';
 import { _Object } from '@aws-sdk/client-s3';
-import { S3Wrapper } from '../src';
+import { S3Wrapper, UploadOptions } from '../src';
 import { Config } from '../src/config';
-import { cliOptions } from './cliconfig';
+import { S3Options } from './cliconfig';
 
 export class Cli {
-  private s3Wrapper: S3Wrapper;
+  private readonly s3Wrapper: S3Wrapper;
+  private readonly isQuiet: boolean;
+  private readonly isJson: boolean;
 
-  constructor(private opts = cliOptions) {
-    const { endpoint, bucket } = opts;
-    this.s3Wrapper = new S3Wrapper({ endpoint, bucket });
+  constructor(
+    private readonly opts: S3Options,
+    s3Wrapper?: S3Wrapper
+  ) {
+    this.isJson = Boolean(opts.json);
+    this.isQuiet = Boolean(opts.quiet || opts.json);
+    if (s3Wrapper) {
+      this.s3Wrapper = s3Wrapper;
+    } else {
+      const logger = this.isQuiet ? { info: () => undefined, warn: () => undefined, error: console.error } : console;
+      this.s3Wrapper = new S3Wrapper({
+        endpoint: opts.endpoint,
+        bucket: opts.bucket,
+        region: opts.region,
+        dryRun: opts.dryRun,
+        logger
+      });
+    }
   }
 
-  async parseOptions() {
-    for (const command in this.opts) {
-      if (Object.hasOwn(this.opts, command)) {
-        const args = this.opts[command] as string | string[];
-        const zip = this.opts['zip'];
-        const folder = this.opts['folder'];
-        const replace = this.opts['replace'];
-        const create = this.opts['create'];
-        switch (command) {
-          case 'backup':
-            await this.backup(args, { zip, folder, replace, create });
-            break;
-          case 'delete':
-            await this.delete(args, folder);
-            break;
-          case 'mysql':
-            await this.dumpMysql({ zip, folder, replace, create });
-            break;
-          case 'list':
-            await this.showList();
-            break;
-        }
+  async parseOptions(): Promise<Record<string, unknown>> {
+    const results: Record<string, unknown> = {};
+
+    if (this.opts.backup?.length) {
+      results.backup = await this.backup(this.opts.backup);
+    }
+    if (this.opts.stdin) {
+      results.stdin = await this.backupStdin();
+    }
+    if (this.opts.download) {
+      results.download = await this.download(this.opts.download, this.opts.output);
+    }
+    if (this.opts.delete?.length) {
+      results.delete = await this.delete(this.opts.delete, this.opts.folder);
+    }
+    if (this.opts.mysql) {
+      results.mysql = await this.dumpMysql();
+    }
+    if (this.opts.list) {
+      results.list = await this.showList();
+    }
+
+    if (this.isJson) {
+      console.info(JSON.stringify(results, null, 2));
+    }
+
+    return results;
+  }
+
+  async showList(): Promise<_Object[]> {
+    const files = await this.s3Wrapper.getFiles(undefined, this.opts.folder);
+    if (!this.isQuiet) {
+      if (files.length) {
+        console.info(`${Config.TAG} File list in bucket "${this.s3Wrapper.bucket}": ${files.length}`);
+        this.beautifulFiles(files);
+      } else {
+        console.info(`${Config.TAG} No files found in bucket "${this.s3Wrapper.bucket}"`);
       }
     }
-  }
-
-  async showList() {
-    const files = await this.s3Wrapper.getFiles();
-    if (files.length) {
-      console.info(`${Config.TAG} File list in bucket "${this.s3Wrapper.bucket}": ${files.length}`);
-      this.beautifulFiles(files);
-    } else {
-      console.info(`${Config.TAG} No files found in bucket "${this.s3Wrapper.bucket}"`);
-    }
+    return files;
   }
 
   async delete(args: string | string[], folderName?: string) {
-    if (!Array.isArray(args)) {
-      args = [args];
-    }
-    const parsed = args
-      .map((arg) => this.parseDelete(arg))
-      .map((arg) => {
-        if (!arg.folder) {
-          arg.folder = folderName || null;
-        }
-        return {
-          ...arg
-        };
+    const list = Array.isArray(args) ? args : [args];
+    const parsed = list.map((arg) => {
+      const entry = this.parseDelete(arg);
+      return {
+        folder: entry.folder || folderName || undefined,
+        timeSpace: entry.timeSpace
+      };
+    });
+
+    const outputs = [];
+    for (const info of parsed) {
+      const result = await this.s3Wrapper.cleanOlder(info.timeSpace, info.folder, undefined, {
+        dryRun: this.opts.dryRun,
+        keepLast: this.opts.keepLast
       });
-    try {
-      for (const info of parsed) {
-        const { folder, timeSpace } = info;
-        await this.s3Wrapper.cleanOlder(timeSpace, folder || undefined);
-      }
-    } catch {
-      console.error(`${Config.TAG} Error in delete files`);
+      outputs.push(result);
     }
+    return outputs;
   }
 
-  async backup(files: string | string[], options: { zip?: string; folder?: string; replace?: boolean; create?: boolean }) {
-    const { zip, folder, replace, create } = options;
-    if (!Array.isArray(files)) {
-      files = [files];
+  async backup(files: string | string[], overrides: Partial<S3Options> = {}) {
+    const merged = { ...this.opts, ...overrides };
+    const fileList = Array.isArray(files) ? files : [files];
+    const encryptKey = this.resolveEncryptionKey(merged.encrypt);
+
+    const uploadOptions: UploadOptions = {
+      compress: merged.zip || merged.zip === null,
+      replace: merged.replace,
+      create: merged.create,
+      storageClass: merged.storageClass,
+      acl: merged.acl,
+      serverSideEncryption: merged.sse,
+      kmsKeyId: merged.kmsKeyId,
+      expire: merged.expire,
+      exclude: merged.exclude,
+      dryRun: merged.dryRun,
+      encryptKey
+    };
+
+    return this.s3Wrapper.uploadFiles(fileList, merged.folder || undefined, uploadOptions);
+  }
+
+  async backupStdin(inputStream: Readable = process.stdin) {
+    if (!this.opts.name) {
+      throw new Error(`${Config.TAG} --name <filename> is required when using --stdin`);
     }
-    await this.s3Wrapper.uploadFiles(files, folder || undefined, {
-      compress: zip || zip === null,
-      replace,
-      create
+    const encryptKey = this.resolveEncryptionKey(this.opts.encrypt);
+
+    return this.s3Wrapper.uploadStream(inputStream, this.opts.name, this.opts.folder || undefined, {
+      replace: this.opts.replace,
+      create: this.opts.create,
+      storageClass: this.opts.storageClass,
+      acl: this.opts.acl,
+      serverSideEncryption: this.opts.sse,
+      kmsKeyId: this.opts.kmsKeyId,
+      expire: this.opts.expire,
+      dryRun: this.opts.dryRun,
+      encryptKey
     });
   }
 
-  async dumpMysql(options: { zip?: string; folder?: string; replace?: boolean; create?: boolean }) {
-    let mysqlfile = '';
-    try {
-      mysqlfile = await this.s3Wrapper.createDumpFile();
-    } catch (err) {
-      console.error(styleText(['bold', 'red'], `${Config.TAG} Error mysql ${String(err)}`));
-      process.exit(-1);
+  async download(key: string, outputPath?: string) {
+    const dest = outputPath || path.basename(key);
+    const decryptKey = this.resolveEncryptionKey(this.opts.encrypt);
+    const savedPath = await this.s3Wrapper.downloadFile(key, dest, { decryptKey });
+    if (!this.isQuiet) {
+      console.info(`${Config.TAG} Downloaded "${key}" to "${savedPath}"`);
     }
-    await this.backup(mysqlfile, options);
+    return savedPath;
+  }
+
+  async dumpMysql(overrides: Partial<S3Options> = {}) {
+    const mysqlFile = await this.s3Wrapper.createDumpFile();
+    try {
+      return await this.backup(mysqlFile, overrides);
+    } finally {
+      await fsp.rm(path.dirname(mysqlFile), { recursive: true, force: true });
+    }
+  }
+
+  private resolveEncryptionKey(encrypt?: boolean): string | undefined {
+    if (!encrypt) {
+      return undefined;
+    }
+    const key = Config.BACKUP_ENCRYPTION_KEY;
+    if (!key) {
+      throw new Error(`${Config.TAG} --encrypt requires the $BACKUP_ENCRYPTION_KEY environment variable to be set`);
+    }
+    return key;
   }
 
   private parseDelete(arg: string) {
-    let folder: string | null;
-    let timeSpace: string;
-    const parsed = arg.split('=');
-    if (parsed.length > 1) {
-      folder = parsed[0];
-      timeSpace = parsed[1];
-    } else {
-      timeSpace = arg;
-      folder = null;
+    const eqIndex = arg.indexOf('=');
+    if (eqIndex !== -1) {
+      return {
+        folder: arg.slice(0, eqIndex),
+        timeSpace: arg.slice(eqIndex + 1)
+      };
     }
     return {
-      folder,
-      timeSpace
+      folder: null,
+      timeSpace: arg
     };
   }
 
   private beautifulFiles(files: _Object[]) {
-    const parsed = files.map((file) => file.Key);
+    const parsed = files.map((file) => file.Key).filter((k): k is string => Boolean(k));
     parsed.sort();
     parsed.forEach((file) => {
       console.info(file);

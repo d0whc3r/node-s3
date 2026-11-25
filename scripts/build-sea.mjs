@@ -15,7 +15,8 @@ const seaConfig = {
   useCodeCache: true
 };
 
-const tmpConfig = path.join(os.tmpdir(), `sea-config-s3-${process.pid}.json`);
+const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'node-s3-sea-'));
+const tmpConfig = path.join(tmpDir, 'sea-config.json');
 fs.writeFileSync(tmpConfig, JSON.stringify(seaConfig, null, 2));
 
 try {
@@ -24,5 +25,5 @@ try {
     execFileSync('codesign', ['--sign', '-', output], { stdio: 'inherit' });
   }
 } finally {
-  fs.rmSync(tmpConfig, { force: true });
+  fs.rmSync(tmpDir, { recursive: true, force: true });
 }

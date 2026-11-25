@@ -15,11 +15,12 @@ RUN pnpm build
 
 FROM debian:bookworm-slim
 
-ENV ACCESS_KEY=""
-ENV SECRET_KEY=""
+RUN useradd --uid 10001 --create-home --shell /usr/sbin/nologin appuser
 
 COPY --from=builder /app/node-s3 /app/node-s3
-RUN chmod +x /app/node-s3
+RUN chmod +x /app/node-s3 && chown appuser:appuser /app/node-s3
 WORKDIR /app
+
+USER 10001
 
 ENTRYPOINT ["/app/node-s3"]
