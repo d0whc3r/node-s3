@@ -1,14 +1,13 @@
-import { ClientConfiguration } from 'aws-sdk/clients/s3';
+import { S3Client, S3ClientConfig } from '@aws-sdk/client-s3';
+import { Config } from './config';
 import { S3WrapperBuckets } from './s3/buckets';
 import { S3WrapperFiles } from './s3/files';
 import { S3Config, UploadOptions, UploadOptionsBasic } from './types';
-import { Config } from './config';
-import { S3 } from 'aws-sdk';
 
 export class S3Wrapper {
   public bucket = '';
   public endpoint = '';
-  private s3Sdk!: S3;
+  private s3Sdk!: S3Client;
   private s3Buckets!: S3WrapperBuckets;
   private s3Files!: S3WrapperFiles;
 
@@ -17,22 +16,24 @@ export class S3Wrapper {
   }
 
   public setConfig(config: S3Config = {}) {
-    const defOptions: ClientConfiguration = {
-      maxRetries: Config.MAX_RETRIES,
-      sslEnabled: Config.SSL_ENABLED,
-      ...config,
-      s3ForcePathStyle: config.forcePathStyle !== undefined ? config.forcePathStyle : Config.FORCE_PATH_STYLE,
-      endpoint: config.endpoint || Config.ENDPOINT
-    };
-    const options: ClientConfiguration = {
-      ...defOptions,
-      apiVersion: Config.API_VERSION,
-      accessKeyId: Config.ACCESS_KEY,
-      secretAccessKey: Config.SECRET_KEY
+    const endpoint = config.endpoint || Config.ENDPOINT || undefined;
+    const options: S3ClientConfig = {
+      region: config.region || process.env.AWS_REGION || 'us-east-1',
+      maxAttempts: (config.maxRetries ?? Config.MAX_RETRIES) + 1,
+      forcePathStyle: config.forcePathStyle !== undefined ? config.forcePathStyle : Config.FORCE_PATH_STYLE,
+      ...(endpoint ? { endpoint } : {}),
+      ...(Config.ACCESS_KEY && Config.SECRET_KEY
+        ? {
+            credentials: {
+              accessKeyId: Config.ACCESS_KEY,
+              secretAccessKey: Config.SECRET_KEY
+            }
+          }
+        : {})
     };
     this.bucket = config.bucket || Config.BUCKET;
-    this.endpoint = config.endpoint || Config.ENDPOINT;
-    this.s3Sdk = new S3(options);
+    this.endpoint = endpoint || '';
+    this.s3Sdk = new S3Client(options);
     this.s3Buckets = new S3WrapperBuckets(this.s3Sdk);
     this.s3Files = new S3WrapperFiles(this.s3Sdk);
     this.s3Buckets.setFileWrapper(this.s3Files);
@@ -46,7 +47,7 @@ export class S3Wrapper {
 
   public createBucket(bucket = this.bucket) {
     this.checkBucket(bucket);
-    return this.s3Buckets.createBucket(this.bucket);
+    return this.s3Buckets.createBucket(bucket);
   }
 
   public removeBucket(force = false, bucket = this.bucket) {
@@ -94,3 +95,5 @@ export class S3Wrapper {
 
   // FILES END
 }
+
+export * from './types';

@@ -1,4 +1,3 @@
-
 # :floppy_disk: Node s3
 
 Utility to use s3 storage using nodejs. It could upload content to s3 storage to use as backup service.
@@ -9,7 +8,7 @@ Utility to use s3 storage using nodejs. It could upload content to s3 storage to
 [![pipeline status](https://gitlab.com/d0whc3r/node-s3/badges/master/pipeline.svg)](https://github.com/d0whc3r/node-s3)
 
 [![codecov](https://codecov.io/gh/d0whc3r/node-s3/branch/master/graph/badge.svg)](https://codecov.io/gh/d0whc3r/node-s3)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/0ff5030a11234255a13694d619b5bcf6)](https://www.codacy.com/manual/d0whc3r/node-s3?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=d0whc3r/node-s3&amp;utm_campaign=Badge_Grade)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/0ff5030a11234255a13694d619b5bcf6)](https://www.codacy.com/manual/d0whc3r/node-s3?utm_source=github.com&utm_medium=referral&utm_content=d0whc3r/node-s3&utm_campaign=Badge_Grade)
 
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=d0whc3r_node-s3&metric=alert_status)](https://sonarcloud.io/dashboard?id=d0whc3r_node-s3)
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=d0whc3r_node-s3&metric=sqale_rating)](https://sonarcloud.io/dashboard?id=d0whc3r_node-s3)
@@ -74,35 +73,35 @@ node-s3 -h
 ```
 Help for node-s3
 
-  Usage of npm node-s3 in command line. 
+  Usage of npm node-s3 in command line.
 
 Options
 
-  -e, --endpoint url                             Destination url (can be defined by $ENDPOINT env variable)                    
-  --bucket bucket                                Destination bucket (can be defined by $BUCKET env variable)                   
-  -l, --list                                     List all files                                                                
-  -b, --backup file*                             Backup files                                                                  
-  -z, --zip zipname.zip                          Zip backup files                                                              
-  -r, --replace                                  Replace files if already exists when backup upload                            
-  -c, --create                                   Create destination upload bucket                                              
-  -f, --folder foldername                        Folder name to upload file/s                                                  
-  -d, --delete foldername=duration OR duration   Clean files older than duration in foldername                                 
-  -m, --mysql                                    Mysql backup using environment variables to connect mysql server              
-                                                 ($MYSQL_USER, $MYSQL_PASSWORD, $MYSQL_DATABASE, $MYSQL_HOST, $MYSQL_PORT)     
-  -h, --help                                     Print this usage guide.                                                       
+  -e, --endpoint url                             Destination url (can be defined by $ENDPOINT env variable)
+  --bucket bucket                                Destination bucket (can be defined by $BUCKET env variable)
+  -l, --list                                     List all files
+  -b, --backup file*                             Backup files
+  -z, --zip zipname.zip                          Zip backup files
+  -r, --replace                                  Replace files if already exists when backup upload
+  -c, --create                                   Create destination upload bucket
+  -f, --folder foldername                        Folder name to upload file/s
+  -d, --delete foldername=duration OR duration   Clean files older than duration in foldername
+  -m, --mysql                                    Mysql backup using environment variables to connect mysql server
+                                                 ($MYSQL_USER, $MYSQL_PASSWORD, $MYSQL_DATABASE, $MYSQL_HOST, $MYSQL_PORT)
+  -h, --help                                     Print this usage guide.
 
 Examples
 
-  1. List files in "sample" bucket.                                                                             $ node-s3 -e http://s3.eu-central-1.amazonaws.com --bucket sample -l                                         
-  2. Backup multiple files to "backupFolder" folder.                                                            $ node-s3 -e http://s3.eu-central-1.amazonaws.com --bucket sample -b src/index.ts -b images/logo.png -f      
-                                                                                                                backupFolder                                                                                                
-  3. Backup files using wildcard to "backup" folder.                                                            $ node-s3 -e http://s3.eu-central-1.amazonaws.com --bucket sample -b src/* -b images/* -f backup             
-  4. Backup files using wildcard and zip into "zipped" folder, bucket will be created if it doesn't exists.     $ node-s3 -e http://s3.eu-central-1.amazonaws.com --bucket sample -b src/* -b images/* -z -f zipped.zip -c   
-  5. Backup files using wildcard and zip using "allfiles.zip" as filename into "zipped" folder, bucket will     $ node-s3 -e http://s3.eu-central-1.amazonaws.com --bucket sample -b src/* -b images/* -z allfiles.zip -f    
-  be created if it doesn't exists and zipfile will be replaced if it exists                                     zipped -c -r                                                                                                
-  6. Delete files in "uploads" folder older than 2days and files in "monthly" folder older than 1month          $ node-s3 -e http://s3.eu-central-1.amazonaws.com --bucket sample -d uploads=2d -d monthly=1M                
-  7. Delete files in "uploads" folder older than 1minute                                                        $ node-s3 -e http://s3.eu-central-1.amazonaws.com --bucket sample -f uploads -d 1m                           
-  8. Generate mysql dump file zip it and upload to "mysql-backup" folder                                        $ node-s3 -e http://s3.eu-central-1.amazonaws.com --bucket sample -f mysql-backup -m -z                      
+  1. List files in "sample" bucket.                                                                             $ node-s3 -e http://s3.eu-central-1.amazonaws.com --bucket sample -l
+  2. Backup multiple files to "backupFolder" folder.                                                            $ node-s3 -e http://s3.eu-central-1.amazonaws.com --bucket sample -b src/index.ts -b images/logo.png -f
+                                                                                                                backupFolder
+  3. Backup files using wildcard to "backup" folder.                                                            $ node-s3 -e http://s3.eu-central-1.amazonaws.com --bucket sample -b src/* -b images/* -f backup
+  4. Backup files using wildcard and zip into "zipped" folder, bucket will be created if it doesn't exists.     $ node-s3 -e http://s3.eu-central-1.amazonaws.com --bucket sample -b src/* -b images/* -z -f zipped.zip -c
+  5. Backup files using wildcard and zip using "allfiles.zip" as filename into "zipped" folder, bucket will     $ node-s3 -e http://s3.eu-central-1.amazonaws.com --bucket sample -b src/* -b images/* -z allfiles.zip -f
+  be created if it doesn't exists and zipfile will be replaced if it exists                                     zipped -c -r
+  6. Delete files in "uploads" folder older than 2days and files in "monthly" folder older than 1month          $ node-s3 -e http://s3.eu-central-1.amazonaws.com --bucket sample -d uploads=2d -d monthly=1M
+  7. Delete files in "uploads" folder older than 1minute                                                        $ node-s3 -e http://s3.eu-central-1.amazonaws.com --bucket sample -f uploads -d 1m
+  8. Generate mysql dump file zip it and upload to "mysql-backup" folder                                        $ node-s3 -e http://s3.eu-central-1.amazonaws.com --bucket sample -f mysql-backup -m -z
 ```
 
 ## Alternatives

@@ -1,21 +1,25 @@
-FROM node:14 AS builder
+FROM node:26-slim AS builder
 
-ENV NODE_OPTIONS "--max_old_space_size=2048"
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
 
-COPY package.json yarn.lock tsconfig.json rollup.config.js /app/
 WORKDIR /app
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json tsconfig.build.json vite.config.mts vite.cli.config.mts vite.sea.config.mts ./
+COPY scripts/ /app/scripts
+RUN pnpm install --frozen-lockfile
 
-RUN yarn install
 COPY src/ /app/src
 COPY cli/ /app/cli
-RUN yarn build
+RUN pnpm build
 
-FROM bitnami/minideb
+FROM debian:bookworm-slim
 
-ENV ACCESS_KEY ""
-ENV SECRET_KEY ""
+ENV ACCESS_KEY=""
+ENV SECRET_KEY=""
 
 COPY --from=builder /app/node-s3 /app/node-s3
 RUN chmod +x /app/node-s3
+WORKDIR /app
 
 ENTRYPOINT ["/app/node-s3"]

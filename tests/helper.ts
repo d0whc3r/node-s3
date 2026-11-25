@@ -1,18 +1,10 @@
 import { S3Wrapper } from '../src';
 
-/**
- * Get a random name for a bucket
- * @returns {string}
- */
 export function getRandomBucketName() {
   const rand = Math.random().toString(36).slice(2);
   return `s3-test-${rand}`;
 }
 
-/**
- * Create a random bucket
- * @returns {Promise<string>}
- */
 export async function initBucket() {
   const bucket = getRandomBucketName();
   try {
@@ -20,14 +12,11 @@ export async function initBucket() {
     console.log(`Created temporal test bucket "${bucket}"`);
     return bucket;
   } catch (e) {
-    throw new Error(`Error creating temporal test bucket "${bucket}": ${e.message}`);
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new Error(`Error creating temporal test bucket "${bucket}": ${msg}`);
   }
 }
 
-/**
- * Remove the previous created bucket
- * @param {string} bucket
- */
 export async function clearBucket(bucket: string) {
   try {
     await new S3Wrapper({ bucket }).removeBucket(true);
@@ -37,11 +26,6 @@ export async function clearBucket(bucket: string) {
   }
 }
 
-/**
- * Wait function
- * @param {number} timeInSecs
- * @returns {Promise<unknown>}
- */
 export function wait(timeInSecs: number) {
   return new Promise((resolve) => {
     setTimeout(() => {

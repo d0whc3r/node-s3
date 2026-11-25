@@ -1,51 +1,67 @@
-# This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
-
 name: Nodejs
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
 jobs:
-  build:
-
+  verify:
     runs-on: ubuntu-latest
     services:
       minio:
-        image: bitnami/minio:latest
+        image: minio/minio:latest
         env:
-          MINIO_ACCESS_KEY: "access-mock-key"
-          MINIO_SECRET_KEY: "secret-mock-key"
-          MINIO_PORT_NUMBER: 9000
+          MINIO_ROOT_USER: access-mock-key
+          MINIO_ROOT_PASSWORD: secret-mock-key
         ports:
           - 9000:9000
-
-    strategy:
-      matrix:
-        node-version: [12.x, 14.x]
-
+        options: --entrypoint sh -c "minio server /data"
     steps:
-      - uses: actions/checkout@v2
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
-      - name: install
-        run: yarn install
-      - name: build
-        run: yarn build
-      - name: test
-        run: yarn test:coverage
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm typecheck
+      - run: pnpm build:base
+      - run: pnpm test:coverage
         env:
           CI: true
-          ENDPOINT: "http://localhost:9000"
-          ACCESS_KEY: "access-mock-key"
-          SECRET_KEY: "secret-mock-key"
-      - name: release
-        run: yarn semantic-release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          ENDPOINT: http://localhost:9000
+          ACCESS_KEY: access-mock-key
+          SECRET_KEY: secret-mock-key
+
+  build-sea:
+    needs: verify
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: node-s3-linux-x64
+            binary: node-s3
+          - os: macos-latest
+            artifact: node-s3-macos-arm64
+            binary: node-s3
+          - os: windows-latest
+            artifact: node-s3-win-x64.exe
+            binary: node-s3.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:sea
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.binary }}

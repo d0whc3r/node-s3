@@ -105,7 +105,7 @@ let cliOptions: S3Options = {};
 try {
   cliOptions = commandLineArgs(optionDefinitions);
 } catch (e) {
-  console.error('[-] Error:', (e as Error)['message']);
+  console.error('[-] Error:', e instanceof Error ? e.message : String(e));
   process.exit(1);
 }
 
@@ -141,8 +141,7 @@ if (cliOptions.help || !Object.keys(cliOptions).length) {
           example: `$ ${baseExec} -b src/* -b images/* -z -f zipped.zip -c`
         },
         {
-          desc:
-            '5. Backup files using wildcard and zip using "allfiles.zip" as filename into "zipped" folder, bucket will be created if it doesn\'t exists and zipfile will be replaced if it exists',
+          desc: '5. Backup files using wildcard and zip using "allfiles.zip" as filename into "zipped" folder, bucket will be created if it doesn\'t exists and zipfile will be replaced if it exists',
           example: `$ ${baseExec} -b src/* -b images/* -z allfiles.zip -f zipped -c -r`
         },
         {

@@ -1,15 +1,8 @@
-import { cliOptions } from './cliconfig';
+import { styleText } from 'node:util';
+import { _Object } from '@aws-sdk/client-s3';
 import { S3Wrapper } from '../src';
 import { Config } from '../src/config';
-import colors from 'colors';
-import { S3 } from 'aws-sdk';
-
-const theme = {
-  folder: 'cyan',
-  error: 'red'
-};
-
-colors.setTheme(theme);
+import { cliOptions } from './cliconfig';
 
 export class Cli {
   private s3Wrapper: S3Wrapper;
@@ -21,7 +14,7 @@ export class Cli {
 
   async parseOptions() {
     for (const command in this.opts) {
-      if (Object.prototype.hasOwnProperty.call(this.opts, command)) {
+      if (Object.hasOwn(this.opts, command)) {
         const args = this.opts[command] as string | string[];
         const zip = this.opts['zip'];
         const folder = this.opts['folder'];
@@ -74,7 +67,7 @@ export class Cli {
         const { folder, timeSpace } = info;
         await this.s3Wrapper.cleanOlder(timeSpace, folder || undefined);
       }
-    } catch (_e) {
+    } catch {
       console.error(`${Config.TAG} Error in delete files`);
     }
   }
@@ -96,18 +89,15 @@ export class Cli {
     try {
       mysqlfile = await this.s3Wrapper.createDumpFile();
     } catch (err) {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions,@typescript-eslint/no-unsafe-call
-      console.error(colors.bold[theme.error](`${Config.TAG} Error mysql ${err}`));
+      console.error(styleText(['bold', 'red'], `${Config.TAG} Error mysql ${String(err)}`));
       process.exit(-1);
     }
     await this.backup(mysqlfile, options);
   }
 
   private parseDelete(arg: string) {
-    let folder;
-    let timeSpace;
+    let folder: string | null;
+    let timeSpace: string;
     const parsed = arg.split('=');
     if (parsed.length > 1) {
       folder = parsed[0];
@@ -122,7 +112,7 @@ export class Cli {
     };
   }
 
-  private beautifulFiles(files: S3.ObjectList) {
+  private beautifulFiles(files: _Object[]) {
     const parsed = files.map((file) => file.Key);
     parsed.sort();
     parsed.forEach((file) => {

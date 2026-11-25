@@ -1,103 +1,106 @@
-import { Delete, DeleteObjectsOutput, GetObjectOutput, ObjectIdentifierList, ObjectList } from 'aws-sdk/clients/s3';
-import { S3WrapperBuckets } from './buckets';
-import { UploadOptions, UploadOptionsBasic } from '../types';
-import path from 'path';
+import fs, { ReadStream } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {
+  _Object,
+  CompleteMultipartUploadCommandOutput,
+  Delete,
+  DeleteObjectsCommand,
+  DeleteObjectsCommandOutput,
+  GetObjectCommand,
+  GetObjectCommandOutput,
+  ListObjectsV2Command,
+  ObjectIdentifier,
+  S3Client
+} from '@aws-sdk/client-s3';
+import { Upload } from '@aws-sdk/lib-storage';
+import { ZipArchive } from 'archiver';
+import dayjs, { ManipulateType } from 'dayjs';
 import mime from 'mime-types';
-import dayjs, { OpUnitType } from 'dayjs';
-import fs, { ReadStream } from 'fs';
-import os from 'os';
-import mkdirp from 'mkdirp';
-import archiver from 'archiver';
-import { Config } from '../config';
-import glob from 'glob';
-import { ManagedUpload } from 'aws-sdk/lib/s3/managed_upload';
 import mysqldump from 'mysqldump';
-import { S3 } from 'aws-sdk';
+import { Config } from '../config';
+import { UploadOptions, UploadOptionsBasic } from '../types';
+import { S3WrapperBuckets } from './buckets';
 
 export class S3WrapperFiles {
   private s3Buckets?: S3WrapperBuckets;
   private readonly defaultUploadOptions: UploadOptionsBasic = { create: true, replace: false };
 
-  constructor(private readonly s3Sdk: S3) {}
+  constructor(private readonly s3Sdk: S3Client) {}
 
   public setBucketWrapper(s3Buckets: S3WrapperBuckets) {
     this.s3Buckets = s3Buckets;
   }
 
-  public getFiles(bucket: string) {
-    return new Promise<ObjectList>((resolve, reject) => {
-      this.s3Sdk.listObjects({ Bucket: bucket }, (error, data) => {
-        if (error) {
-          reject(error.message);
-        } else {
-          resolve(data.Contents || []);
-        }
-      });
-    });
+  public async getFiles(bucket: string): Promise<_Object[]> {
+    try {
+      const data = await this.s3Sdk.send(new ListObjectsV2Command({ Bucket: bucket }));
+      return data.Contents || [];
+    } catch (error) {
+      throw error instanceof Error ? error.message : String(error);
+    }
   }
 
-  public fileInfo(bucket: string, name: string) {
-    return new Promise<GetObjectOutput>((resolve, reject) => {
-      this.s3Sdk.getObject({ Bucket: bucket, Key: name }, (error, data) => {
-        if (error) {
-          reject(error.message);
-        } else {
-          resolve(data);
-        }
-      });
-    });
+  public async fileInfo(bucket: string, name: string): Promise<GetObjectCommandOutput> {
+    try {
+      return await this.s3Sdk.send(new GetObjectCommand({ Bucket: bucket, Key: name }));
+    } catch (error) {
+      throw error instanceof Error ? error.message : String(error);
+    }
   }
 
-  public fileExist(bucket: string, name: string) {
-    return new Promise<boolean>((resolve) => {
-      this.fileInfo(bucket, name)
-        .then(() => resolve(true))
-        .catch(() => resolve(false));
-    });
+  public async fileExist(bucket: string, name: string): Promise<boolean> {
+    try {
+      await this.fileInfo(bucket, name);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   public async deleteAllContent(bucket: string) {
-    const files = (await this.getFiles(bucket)).map((obj) => ({ Key: obj.Key })) as ObjectIdentifierList;
+    const files: ObjectIdentifier[] = (await this.getFiles(bucket))
+      .filter((obj): obj is _Object & { Key: string } => Boolean(obj.Key))
+      .map((obj) => ({ Key: obj.Key }));
     return this.deleteFiles(bucket, files);
   }
 
-  public async uploadFile(bucket: string, file: string, folderName?: string, options?: UploadOptionsBasic) {
-    let destination: string;
-    let mimeType: string | undefined;
-    let expire: Date | undefined;
-    let replaced: boolean;
-    try {
-      const name = path.basename(file);
-      destination = [folderName, name].filter(Boolean).join('/');
-      mimeType = mime.contentType(name) || undefined;
-      const opts = { ...this.defaultUploadOptions, ...(options || {}) };
-      expire = this.getExpire(opts);
-      await this.createIfNeeded(opts, bucket);
-      replaced = await this.canBeReplaced(opts, bucket, destination);
-    } catch (e) {
-      return Promise.reject(e);
+  public async uploadFile(
+    bucket: string,
+    file: string,
+    folderName?: string,
+    options?: UploadOptionsBasic
+  ): Promise<CompleteMultipartUploadCommandOutput> {
+    const name = path.basename(file);
+    const destination = [folderName, name].filter(Boolean).join('/');
+    const mimeType = mime.contentType(name) || undefined;
+    const opts = { ...this.defaultUploadOptions, ...options };
+    const expire = this.getExpire(opts);
+    await this.createIfNeeded(opts, bucket);
+    const replaced = await this.canBeReplaced(opts, bucket, destination);
+
+    if (!replaced) {
+      throw new Error(`${Config.TAG} File "${destination}" already exists in bucket "${bucket}" and will not be replaced`);
     }
-    return new Promise<ManagedUpload.SendData>((resolve, reject) => {
-      if (!replaced) {
-        return reject(Error(`${Config.TAG} File "${destination}" already exists in bucket "${bucket}" and will not be replaced`));
-      }
-      const readStream = fs.createReadStream(file);
-      const params: S3.Types.PutObjectRequest = {
-        Key: destination,
-        Bucket: bucket,
-        Body: readStream,
-        Expires: expire,
-        ContentType: mimeType
-      };
-      this.s3Sdk.upload(params, (error, data) => {
-        readStream.destroy();
-        if (error) {
-          reject(error.message);
-        } else {
-          resolve(data);
+
+    const readStream = fs.createReadStream(file);
+    try {
+      const upload = new Upload({
+        client: this.s3Sdk,
+        params: {
+          Key: destination,
+          Bucket: bucket,
+          Body: readStream,
+          Expires: expire,
+          ContentType: mimeType
         }
       });
-    });
+      return await upload.done();
+    } catch (error) {
+      throw error instanceof Error ? error.message : String(error);
+    } finally {
+      readStream.destroy();
+    }
   }
 
   public async uploadFiles(bucket: string, files: string | string[], folderName?: string, options: UploadOptions = {}) {
@@ -106,17 +109,17 @@ export class S3WrapperFiles {
       files = [files];
     }
     const uploadFiles = await this.getUploadFiles(compress, files);
-    let result: { [filename: string]: ManagedUpload.SendData } = {};
+    let result: Record<string, CompleteMultipartUploadCommandOutput> = {};
     for (const file of uploadFiles) {
       if (file.includes('*')) {
         const dir = baseDir;
         options.baseDir = file.replace('*', '');
-        const response = await this.uploadFiles(bucket, glob.sync(file), this.extractBaseDir(file, dir, folderName), options);
+        const response = await this.uploadFiles(bucket, fs.globSync(file), this.extractBaseDir(file, dir, folderName), options);
         result = { ...result, ...response };
       } else if (fs.lstatSync(file).isDirectory()) {
         const dir = baseDir;
         options.baseDir = file;
-        const response = await this.uploadFiles(bucket, glob.sync(`${file}/*`), this.extractBaseDir(file, dir, folderName), options);
+        const response = await this.uploadFiles(bucket, fs.globSync(`${file}/*`), this.extractBaseDir(file, dir, folderName), options);
         result = { ...result, ...response };
       } else {
         result[file] = await this.uploadFile(bucket, file, folderName, { replace, create, expireDate, expire });
@@ -127,11 +130,11 @@ export class S3WrapperFiles {
 
   public async cleanOlder(bucket: string, timeSpace: string, folderName?: string) {
     const { value, unit } = this.getTimeSpace(timeSpace);
-    const limit = dayjs().subtract(value, unit as OpUnitType);
+    const limit = dayjs().subtract(value, unit as ManipulateType);
     const files = await this.getFilesInFolder(bucket, folderName);
-    const filesToDelete = files
-      .filter((file) => !!file.LastModified && dayjs(file.LastModified).isBefore(limit))
-      .map((file) => ({ Key: file.Key })) as ObjectIdentifierList;
+    const filesToDelete: ObjectIdentifier[] = files
+      .filter((file): file is _Object & { Key: string } => Boolean(file.Key && file.LastModified && dayjs(file.LastModified).isBefore(limit)))
+      .map((file) => ({ Key: file.Key }));
     return this.deleteFiles(bucket, filesToDelete);
   }
 
@@ -157,7 +160,7 @@ export class S3WrapperFiles {
     }).then(({ dump }) => {
       const folder = os.tmpdir();
       const fileDest = path.join(folder, `mysqldump-${dayjs().format('YYYY-MM-DD.HHmmss')}.sql`);
-      mkdirp.sync(path.dirname(fileDest));
+      fs.mkdirSync(path.dirname(fileDest), { recursive: true });
       const content = Object.values(dump)
         .map((result) => result && result.replace(/^# /gm, '-- '))
         .join('\n\n');
@@ -209,7 +212,7 @@ export class S3WrapperFiles {
     } else if (opts.expire) {
       const { value, unit } = this.getTimeSpace(opts.expire);
       expire = dayjs()
-        .add(+value, unit as OpUnitType)
+        .add(+value, unit as ManipulateType)
         .toDate();
     }
     return expire;
@@ -223,37 +226,39 @@ export class S3WrapperFiles {
     return { value: +value, unit };
   }
 
-  private deleteFiles(bucket: string, files: ObjectIdentifierList) {
-    return new Promise<DeleteObjectsOutput>((resolve, reject) => {
-      const filesToDelete: Delete = { Objects: files.filter((f) => !!f.Key) };
-      this.s3Sdk.deleteObjects({ Bucket: bucket, Delete: filesToDelete }, (error, data) => {
-        if (error) {
-          reject(error.message);
-        } else {
-          const { Deleted } = data;
-          if (Deleted && Deleted.length) {
-            Deleted.forEach((f) => {
-              if (f.Key) {
-                console.warn(`${Config.TAG} Deleted file: ${f.Key}`);
-              }
-            });
-          } else {
-            console.info(`${Config.TAG} No files deleted`);
+  private async deleteFiles(bucket: string, files: ObjectIdentifier[]): Promise<DeleteObjectsCommandOutput> {
+    const objects = files.filter((f) => Boolean(f.Key));
+    if (!objects.length) {
+      console.info(`${Config.TAG} No files deleted`);
+      return { Deleted: [], Errors: [], $metadata: {} };
+    }
+    const filesToDelete: Delete = { Objects: objects };
+    try {
+      const data = await this.s3Sdk.send(new DeleteObjectsCommand({ Bucket: bucket, Delete: filesToDelete }));
+      const { Deleted } = data;
+      if (Deleted && Deleted.length) {
+        Deleted.forEach((f) => {
+          if (f.Key) {
+            console.warn(`${Config.TAG} Deleted file: ${f.Key}`);
           }
-          resolve(data);
-        }
-      });
-    });
+        });
+      } else {
+        console.info(`${Config.TAG} No files deleted`);
+      }
+      return data;
+    } catch (error) {
+      throw error instanceof Error ? error.message : String(error);
+    }
   }
 
   private compressFiles(files: string[], outputName: string): Promise<string> {
     return new Promise((resolve, reject) => {
       const folder = os.tmpdir();
       const fileDest = path.resolve(folder, outputName);
-      mkdirp.sync(path.dirname(fileDest));
+      fs.mkdirSync(path.dirname(fileDest), { recursive: true });
       const output = fs.createWriteStream(fileDest);
       const readStreams: ReadStream[] = [];
-      const archive = archiver('zip', {
+      const archive = new ZipArchive({
         zlib: { level: 9 }
       });
       output.on('close', () => {
@@ -287,7 +292,7 @@ export class S3WrapperFiles {
         }
       });
 
-      archive.finalize().finally(() => {
+      void archive.finalize().finally(() => {
         readStreams.forEach((r) => {
           r.destroy();
         });
