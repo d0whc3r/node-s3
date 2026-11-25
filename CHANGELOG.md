@@ -1,5 +1,18 @@
 # Changelog
 
+# [1.4.0](https://github.com/d0whc3r/node-s3/compare/v1.3.13...v1.4.0) (2026-11-25)
+
+
+### Bug Fixes
+
+* **ci:** remove legacy postversion script breaking semantic-release ([a4095f5](https://github.com/d0whc3r/node-s3/commit/a4095f555cafeadabbb503ee1ce52829cf1ed2d9))
+* **ci:** switch removed minio/minio image to Chainguard MinIO ([8c22c11](https://github.com/d0whc3r/node-s3/commit/8c22c11456236f9f038e1350fcfb538a6222588d))
+
+
+### Features
+
+* harden security, add encryption/download/dry-run, and unit tests ([a609fd5](https://github.com/d0whc3r/node-s3/commit/a609fd587526aa76f67beb18c64eed7855b46eeb))
+
 ## [1.3.13](https://github.com/d0whc3r/node-s3/compare/v1.3.12...v1.3.13) (2021-02-15)
 
 ### Bug Fixes
