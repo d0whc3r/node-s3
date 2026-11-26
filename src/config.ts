@@ -14,8 +14,8 @@ function parseNumberEnv(value: string | undefined, defaultValue: number): number
 }
 
 export class Config {
-  static API_VERSION = '2006-03-01';
-  static TAG = '[node-s3]';
+  static readonly API_VERSION = '2006-03-01';
+  static readonly TAG = '[node-s3]';
 
   private static overrides: Record<string, unknown> = {};
 

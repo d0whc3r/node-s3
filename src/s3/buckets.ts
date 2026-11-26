@@ -17,6 +17,8 @@ interface S3ErrorLike {
   };
 }
 
+const NOT_FOUND_NAMES = new Set(['NotFound', 'NoSuchBucket', 'NoSuchKey', '404']);
+
 export function isNotFoundError(error: unknown): boolean {
   if (!error || typeof error !== 'object') {
     return false;
@@ -25,8 +27,7 @@ export function isNotFoundError(error: unknown): boolean {
   if (err.$metadata?.httpStatusCode === 404) {
     return true;
   }
-  const notFoundNames = ['NotFound', 'NoSuchBucket', 'NoSuchKey', '404'];
-  return Boolean((err.name && notFoundNames.includes(err.name)) || (err.Code && notFoundNames.includes(err.Code)));
+  return Boolean((err.name && NOT_FOUND_NAMES.has(err.name)) || (err.Code && NOT_FOUND_NAMES.has(err.Code)));
 }
 
 export function wrapS3Error(error: unknown, context: string): Error {

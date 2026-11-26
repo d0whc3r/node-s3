@@ -234,38 +234,72 @@ export interface S3Options {
   quiet?: boolean;
 }
 
+const BOOLEAN_OPTION_MAP: ReadonlyArray<readonly [string, keyof S3Options]> = [
+  ['help', 'help'],
+  ['version', 'version'],
+  ['list', 'list'],
+  ['create', 'create'],
+  ['replace', 'replace'],
+  ['mysql', 'mysql'],
+  ['stdin', 'stdin'],
+  ['encrypt', 'encrypt'],
+  ['dry-run', 'dryRun'],
+  ['json', 'json'],
+  ['quiet', 'quiet']
+];
+
+const STRING_OPTION_MAP: ReadonlyArray<readonly [string, keyof S3Options]> = [
+  ['endpoint', 'endpoint'],
+  ['bucket', 'bucket'],
+  ['region', 'region'],
+  ['download', 'download'],
+  ['output', 'output'],
+  ['folder', 'folder'],
+  ['name', 'name'],
+  ['storage-class', 'storageClass'],
+  ['sse', 'sse'],
+  ['kms-key-id', 'kmsKeyId'],
+  ['acl', 'acl'],
+  ['expire', 'expire']
+];
+
+const ARRAY_OPTION_MAP: ReadonlyArray<readonly [string, keyof S3Options]> = [
+  ['backup', 'backup'],
+  ['delete', 'delete'],
+  ['exclude', 'exclude']
+];
+
+function toStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.map(String) : [String(value)];
+}
+
 export function parseCliArgs(argv?: string[]): S3Options {
   const raw = commandLineArgs(optionDefinitions, argv !== undefined ? { argv } : undefined);
   const options: S3Options = {};
+  const target = options as Record<string, unknown>;
 
-  if (raw.help !== undefined) options.help = Boolean(raw.help);
-  if (raw.version !== undefined) options.version = Boolean(raw.version);
-  if (raw.endpoint !== undefined) options.endpoint = String(raw.endpoint);
-  if (raw.bucket !== undefined) options.bucket = String(raw.bucket);
-  if (raw.region !== undefined) options.region = String(raw.region);
-  if (raw.list !== undefined) options.list = Boolean(raw.list);
-  if (raw.backup !== undefined) options.backup = Array.isArray(raw.backup) ? raw.backup : [String(raw.backup)];
-  if (raw.download !== undefined) options.download = String(raw.download);
-  if (raw.output !== undefined) options.output = String(raw.output);
-  if (raw.folder !== undefined) options.folder = String(raw.folder);
-  if ('zip' in raw) options.zip = raw.zip === null ? null : String(raw.zip);
-  if (raw.create !== undefined) options.create = Boolean(raw.create);
-  if (raw.replace !== undefined) options.replace = Boolean(raw.replace);
-  if (raw.delete !== undefined) options.delete = Array.isArray(raw.delete) ? raw.delete : [String(raw.delete)];
-  if (raw['keep-last'] !== undefined) options.keepLast = Number(raw['keep-last']);
-  if (raw.mysql !== undefined) options.mysql = Boolean(raw.mysql);
-  if (raw.stdin !== undefined) options.stdin = Boolean(raw.stdin);
-  if (raw.name !== undefined) options.name = String(raw.name);
-  if (raw.encrypt !== undefined) options.encrypt = Boolean(raw.encrypt);
-  if (raw['storage-class'] !== undefined) options.storageClass = String(raw['storage-class']) as StorageClass;
-  if (raw.sse !== undefined) options.sse = String(raw.sse) as ServerSideEncryption;
-  if (raw['kms-key-id'] !== undefined) options.kmsKeyId = String(raw['kms-key-id']);
-  if (raw.acl !== undefined) options.acl = String(raw.acl) as ObjectCannedACL;
-  if (raw.expire !== undefined) options.expire = String(raw.expire);
-  if (raw.exclude !== undefined) options.exclude = Array.isArray(raw.exclude) ? raw.exclude : [String(raw.exclude)];
-  if (raw['dry-run'] !== undefined) options.dryRun = Boolean(raw['dry-run']);
-  if (raw.json !== undefined) options.json = Boolean(raw.json);
-  if (raw.quiet !== undefined) options.quiet = Boolean(raw.quiet);
+  for (const [rawKey, optKey] of BOOLEAN_OPTION_MAP) {
+    if (raw[rawKey] !== undefined) {
+      target[optKey] = Boolean(raw[rawKey]);
+    }
+  }
+  for (const [rawKey, optKey] of STRING_OPTION_MAP) {
+    if (raw[rawKey] !== undefined) {
+      target[optKey] = String(raw[rawKey]);
+    }
+  }
+  for (const [rawKey, optKey] of ARRAY_OPTION_MAP) {
+    if (raw[rawKey] !== undefined) {
+      target[optKey] = toStringArray(raw[rawKey]);
+    }
+  }
+
+  if ('zip' in raw) {
+    options.zip = raw.zip === null ? null : String(raw.zip);
+  }
+  if (raw['keep-last'] !== undefined) {
+    options.keepLast = Number(raw['keep-last']);
+  }
 
   return options;
 }

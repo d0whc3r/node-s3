@@ -3,7 +3,7 @@ import { S3Client, S3ClientConfig } from '@aws-sdk/client-s3';
 import { Config } from './config';
 import { S3WrapperBuckets } from './s3/buckets';
 import { S3WrapperFiles } from './s3/files';
-import { CleanOlderOptions, DownloadOptions, S3Config, UploadOptions, UploadOptionsBasic } from './types';
+import { CleanOlderOptions, DownloadOptions, Logger, S3Config, UploadOptions, UploadOptionsBasic } from './types';
 
 export class S3Wrapper {
   public bucket = '';
@@ -23,36 +23,10 @@ export class S3Wrapper {
     }
 
     const endpoint = config.endpoint || Config.ENDPOINT || undefined;
-    const accessKeyId = config.accessKeyId || Config.ACCESS_KEY || undefined;
-    const secretAccessKey = config.secretAccessKey || Config.SECRET_KEY || undefined;
-    const sessionToken = config.sessionToken || Config.SESSION_TOKEN || undefined;
-    const region = config.region || Config.REGION || 'us-east-1';
     const logger = config.logger ?? console;
+    const options = this.buildClientOptions(config, endpoint, logger);
 
-    const isHttpEndpoint = Boolean(endpoint && /^http:\/\//i.test(endpoint));
-    const sslEnabled = config.sslEnabled !== undefined ? config.sslEnabled : isHttpEndpoint ? false : Config.SSL_ENABLED;
-    if (isHttpEndpoint && config.sslEnabled === undefined) {
-      logger.warn?.(`${Config.TAG} Using insecure HTTP endpoint "${endpoint}"`);
-    }
-
-    const options: S3ClientConfig = {
-      region,
-      tls: sslEnabled,
-      maxAttempts: (config.maxRetries ?? Config.MAX_RETRIES) + 1,
-      forcePathStyle: config.forcePathStyle !== undefined ? config.forcePathStyle : Config.FORCE_PATH_STYLE,
-      ...(endpoint ? { endpoint } : {}),
-      ...(accessKeyId && secretAccessKey
-        ? {
-            credentials: {
-              accessKeyId,
-              secretAccessKey,
-              ...(sessionToken ? { sessionToken } : {})
-            }
-          }
-        : {})
-    };
-
-    this.bucket = config.bucket !== undefined ? config.bucket : Config.BUCKET;
+    this.bucket = config.bucket ?? Config.BUCKET;
     this.endpoint = endpoint || '';
 
     if (s3Client) {
@@ -70,6 +44,38 @@ export class S3Wrapper {
       onProgress: config.onProgress
     });
     this.s3Buckets = new S3WrapperBuckets(this.s3Sdk, (bucket) => this.s3Files.deleteAllContent(bucket));
+  }
+
+  private buildClientOptions(config: S3Config, endpoint: string | undefined, logger: Logger): S3ClientConfig {
+    const accessKeyId = config.accessKeyId || Config.ACCESS_KEY || undefined;
+    const secretAccessKey = config.secretAccessKey || Config.SECRET_KEY || undefined;
+    const sessionToken = config.sessionToken || Config.SESSION_TOKEN || undefined;
+    const region = config.region || Config.REGION || 'us-east-1';
+
+    const isHttpEndpoint = Boolean(endpoint && /^http:\/\//i.test(endpoint));
+    const defaultSsl = isHttpEndpoint ? false : Config.SSL_ENABLED;
+    const sslEnabled = config.sslEnabled ?? defaultSsl;
+    if (isHttpEndpoint && config.sslEnabled === undefined) {
+      logger.warn?.(`${Config.TAG} Using insecure HTTP endpoint "${endpoint}"`);
+    }
+
+    const credentials =
+      accessKeyId && secretAccessKey
+        ? {
+            accessKeyId,
+            secretAccessKey,
+            ...(sessionToken ? { sessionToken } : {})
+          }
+        : undefined;
+
+    return {
+      region,
+      tls: sslEnabled,
+      maxAttempts: (config.maxRetries ?? Config.MAX_RETRIES) + 1,
+      forcePathStyle: config.forcePathStyle ?? Config.FORCE_PATH_STYLE,
+      ...(endpoint ? { endpoint } : {}),
+      ...(credentials ? { credentials } : {})
+    };
   }
 
   public destroy(): void {

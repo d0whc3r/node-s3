@@ -29,7 +29,7 @@ import { createDecryptStream, createEncryptStream } from '../crypto';
 import { CleanOlderOptions, DownloadOptions, Logger, UploadOptions, UploadOptionsBasic, UploadProgress } from '../types';
 import { isNotFoundError, wrapS3Error } from './buckets';
 
-const TIME_SPACE_REGEX = /^(\d+)(s|m|h|d|w|M|y|seconds?|minutes?|hours?|days?|weeks?|months?|years?)$/;
+const TIME_SPACE_REGEX = /^(\d+)([a-zA-Z]+)$/;
 
 const TIME_UNIT_MAP: Record<string, ManipulateType> = {
   s: 'second',
@@ -72,7 +72,7 @@ export function normalizeS3Key(...segments: (string | undefined)[]): string {
     if (!segment) {
       continue;
     }
-    const normalized = segment.replace(/\\/g, '/');
+    const normalized = segment.replaceAll('\\', '/');
     for (const part of normalized.split('/')) {
       if (!part || part === '.') {
         continue;
@@ -113,7 +113,7 @@ function isExcluded(filePath: string, excludePatterns: string[]): boolean {
   if (!excludePatterns.length) {
     return false;
   }
-  const normalized = filePath.replace(/\\/g, '/');
+  const normalized = filePath.replaceAll('\\', '/');
   const basename = path.posix.basename(normalized);
   return excludePatterns.some((pattern) => path.matchesGlob(normalized, pattern) || path.matchesGlob(basename, pattern));
 }
@@ -123,12 +123,14 @@ async function runWithConcurrency<T, R>(items: T[], concurrency: number, worker:
   const workerCount = Math.max(1, Math.min(concurrency, items.length));
   let nextIndex = 0;
 
-  const runWorker = async () => {
-    while (nextIndex < items.length) {
-      const currentIndex = nextIndex;
-      nextIndex += 1;
-      results[currentIndex] = await worker(items[currentIndex]);
+  const runWorker = async (): Promise<void> => {
+    if (nextIndex >= items.length) {
+      return;
     }
+    const currentIndex = nextIndex;
+    nextIndex += 1;
+    results[currentIndex] = await worker(items[currentIndex]);
+    await runWorker();
   };
 
   await Promise.all(Array.from({ length: workerCount }, () => runWorker()));
@@ -155,22 +157,25 @@ export class S3WrapperFiles {
   public async getFiles(bucket: string, prefix?: string): Promise<_Object[]> {
     const normalizedPrefix = prefix ? normalizePrefix(prefix) : undefined;
     const objects: _Object[] = [];
-    let continuationToken: string | undefined;
+
+    const fetchPage = async (continuationToken?: string): Promise<void> => {
+      const data = await this.s3Sdk.send(
+        new ListObjectsV2Command({
+          Bucket: bucket,
+          ...(normalizedPrefix ? { Prefix: normalizedPrefix } : {}),
+          ...(continuationToken ? { ContinuationToken: continuationToken } : {})
+        })
+      );
+      if (data.Contents) {
+        objects.push(...data.Contents);
+      }
+      if (data.IsTruncated && data.NextContinuationToken) {
+        await fetchPage(data.NextContinuationToken);
+      }
+    };
 
     try {
-      do {
-        const data = await this.s3Sdk.send(
-          new ListObjectsV2Command({
-            Bucket: bucket,
-            ...(normalizedPrefix ? { Prefix: normalizedPrefix } : {}),
-            ...(continuationToken ? { ContinuationToken: continuationToken } : {})
-          })
-        );
-        if (data.Contents) {
-          objects.push(...data.Contents);
-        }
-        continuationToken = data.IsTruncated ? data.NextContinuationToken : undefined;
-      } while (continuationToken);
+      await fetchPage();
       return objects;
     } catch (error) {
       throw wrapS3Error(error, `Failed to list files in bucket "${bucket}"`);
@@ -316,7 +321,10 @@ export class S3WrapperFiles {
     const fileList = Array.isArray(files) ? files : [files];
     const opts = { ...this.defaultUploadOptions, ...options };
     const isDryRun = opts.dryRun ?? this.defaultDryRun;
-    const excludePatterns = opts.exclude ? (Array.isArray(opts.exclude) ? opts.exclude : [opts.exclude]) : [];
+    let excludePatterns: string[] = [];
+    if (opts.exclude) {
+      excludePatterns = Array.isArray(opts.exclude) ? opts.exclude : [opts.exclude];
+    }
     const followSymlinks = opts.followSymlinks ?? false;
 
     if (!opts.skipBucketCheck && !isDryRun) {
@@ -457,7 +465,7 @@ export class S3WrapperFiles {
     await fsp.chmod(tmpDir, 0o700);
     const fileDest = path.join(tmpDir, `mysqldump-${dayjs().format('YYYY-MM-DD.HHmmss')}.sql`);
     const content = Object.values(dump)
-      .map((result) => result && result.replace(/^# /gm, '-- '))
+      .map((result) => result?.replace(/^# /gm, '-- '))
       .join('\n\n');
     await fsp.writeFile(fileDest, content, { mode: 0o600 });
     return fileDest;
@@ -470,31 +478,30 @@ export class S3WrapperFiles {
       return { Deleted: [], Errors: [], $metadata: {} };
     }
 
+    const chunks: ObjectIdentifier[][] = [];
+    for (let i = 0; i < objects.length; i += MAX_DELETE_BATCH_SIZE) {
+      chunks.push(objects.slice(i, i + MAX_DELETE_BATCH_SIZE));
+    }
+
+    let responses: DeleteObjectsCommandOutput[];
+    try {
+      responses = await Promise.all(
+        chunks.map((chunk) => {
+          const filesToDelete: Delete = { Objects: chunk };
+          return this.s3Sdk.send(new DeleteObjectsCommand({ Bucket: bucket, Delete: filesToDelete }));
+        })
+      );
+    } catch (error) {
+      throw wrapS3Error(error, `Failed to delete files from bucket "${bucket}"`);
+    }
+
     const allDeleted: DeletedObject[] = [];
     const allErrors: S3DeleteError[] = [];
     let lastMetadata: DeleteObjectsCommandOutput['$metadata'] = {};
 
-    try {
-      for (let i = 0; i < objects.length; i += MAX_DELETE_BATCH_SIZE) {
-        const chunk = objects.slice(i, i + MAX_DELETE_BATCH_SIZE);
-        const filesToDelete: Delete = { Objects: chunk };
-        const data = await this.s3Sdk.send(new DeleteObjectsCommand({ Bucket: bucket, Delete: filesToDelete }));
-        lastMetadata = data.$metadata;
-
-        if (data.Deleted?.length) {
-          allDeleted.push(...data.Deleted);
-          for (const f of data.Deleted) {
-            if (f.Key) {
-              this.logger.warn?.(`${Config.TAG} Deleted file: ${f.Key}`);
-            }
-          }
-        }
-        if (data.Errors?.length) {
-          allErrors.push(...data.Errors);
-        }
-      }
-    } catch (error) {
-      throw wrapS3Error(error, `Failed to delete files from bucket "${bucket}"`);
+    for (const data of responses) {
+      lastMetadata = data.$metadata;
+      this.collectDeleteBatchResults(data, allDeleted, allErrors);
     }
 
     if (allErrors.length > 0) {
@@ -513,6 +520,20 @@ export class S3WrapperFiles {
     };
   }
 
+  private collectDeleteBatchResults(data: DeleteObjectsCommandOutput, allDeleted: DeletedObject[], allErrors: S3DeleteError[]): void {
+    if (data.Deleted?.length) {
+      allDeleted.push(...data.Deleted);
+      for (const f of data.Deleted) {
+        if (f.Key) {
+          this.logger.warn?.(`${Config.TAG} Deleted file: ${f.Key}`);
+        }
+      }
+    }
+    if (data.Errors?.length) {
+      allErrors.push(...data.Errors);
+    }
+  }
+
   private async collectUploadTasks(
     files: string[],
     folderName: string | undefined,
@@ -520,48 +541,42 @@ export class S3WrapperFiles {
     followSymlinks: boolean,
     excludePatterns: string[]
   ): Promise<Array<{ file: string; folderName?: string }>> {
-    const tasks: Array<{ file: string; folderName?: string }> = [];
+    const nestedLists = await Promise.all(files.map((file) => this.collectTasksForEntry(file, folderName, baseDir, followSymlinks, excludePatterns)));
+    return nestedLists.flat();
+  }
 
-    for (const file of files) {
-      if (file.includes('*')) {
-        const globBase = extractGlobBase(file);
-        const matched = fs.globSync(file);
-        const nextFolder = this.extractBaseDir(globBase, baseDir, folderName);
-        const nested = await this.collectUploadTasks(matched, nextFolder, globBase, followSymlinks, excludePatterns);
-        tasks.push(...nested);
-        continue;
-      }
-
-      const stat = await fsp.lstat(file);
-      if (stat.isSymbolicLink()) {
-        if (!followSymlinks) {
-          this.logger.warn?.(`${Config.TAG} Skipping symlink: ${file}`);
-          continue;
-        }
-        const targetStat = await fsp.stat(file);
-        if (targetStat.isDirectory()) {
-          const entries = (await fsp.readdir(file)).map((entry) => path.join(file, entry));
-          const nextFolder = this.extractBaseDir(file, baseDir, folderName);
-          const nested = await this.collectUploadTasks(entries, nextFolder, file, followSymlinks, excludePatterns);
-          tasks.push(...nested);
-          continue;
-        }
-      } else if (stat.isDirectory()) {
-        const entries = (await fsp.readdir(file)).map((entry) => path.join(file, entry));
-        const nextFolder = this.extractBaseDir(file, baseDir, folderName);
-        const nested = await this.collectUploadTasks(entries, nextFolder, file, followSymlinks, excludePatterns);
-        tasks.push(...nested);
-        continue;
-      }
-
-      if (isExcluded(file, excludePatterns)) {
-        continue;
-      }
-
-      tasks.push({ file, folderName });
+  private async collectTasksForEntry(
+    file: string,
+    folderName: string | undefined,
+    baseDir: string | undefined,
+    followSymlinks: boolean,
+    excludePatterns: string[]
+  ): Promise<Array<{ file: string; folderName?: string }>> {
+    if (file.includes('*')) {
+      const globBase = extractGlobBase(file);
+      const matched = fs.globSync(file);
+      const nextFolder = this.extractBaseDir(globBase, baseDir, folderName);
+      return this.collectUploadTasks(matched, nextFolder, globBase, followSymlinks, excludePatterns);
     }
 
-    return tasks;
+    const stat = await fsp.lstat(file);
+    if (stat.isSymbolicLink() && !followSymlinks) {
+      this.logger.warn?.(`${Config.TAG} Skipping symlink: ${file}`);
+      return [];
+    }
+
+    const effectiveStat = stat.isSymbolicLink() ? await fsp.stat(file) : stat;
+    if (effectiveStat.isDirectory()) {
+      const entries = (await fsp.readdir(file)).map((entry) => path.join(file, entry));
+      const nextFolder = this.extractBaseDir(file, baseDir, folderName);
+      return this.collectUploadTasks(entries, nextFolder, file, followSymlinks, excludePatterns);
+    }
+
+    if (isExcluded(file, excludePatterns)) {
+      return [];
+    }
+
+    return [{ file, folderName }];
   }
 
   private extractBaseDir(file: string, baseDir?: string, folderName?: string): string | undefined {
@@ -604,15 +619,48 @@ export class S3WrapperFiles {
 
   private getTimeSpace(timeSpace: string): { value: number; unit: ManipulateType } {
     const match = TIME_SPACE_REGEX.exec(timeSpace);
-    if (!match) {
+    const unit = match ? TIME_UNIT_MAP[match[2]] : undefined;
+    if (!match || !unit) {
       throw new Error(`${Config.TAG} Invalid time definition "${timeSpace}". Expected format like "30s", "15m", "24h", "7d", "2w", "1M", or "1y"`);
     }
     const value = Number(match[1]);
-    const unit = TIME_UNIT_MAP[match[2]];
-    if (!unit || Number.isNaN(value)) {
+    if (Number.isNaN(value)) {
       throw new Error(`${Config.TAG} Invalid time unit in "${timeSpace}"`);
     }
     return { value, unit };
+  }
+
+  private appendFileToArchive(
+    archive: ZipArchive,
+    file: string,
+    ctx: { followSymlinks: boolean; excludePatterns: string[]; readStreams: ReadStream[]; fail: (err: unknown) => void }
+  ): void {
+    if (file.includes('*')) {
+      archive.glob(file, ctx.excludePatterns.length ? { ignore: ctx.excludePatterns } : undefined);
+      return;
+    }
+
+    const stat = fs.lstatSync(file);
+    if (stat.isSymbolicLink() && !ctx.followSymlinks) {
+      this.logger.warn?.(`${Config.TAG} Skipping symlink in archive: ${file}`);
+      return;
+    }
+
+    const effectiveStat = stat.isSymbolicLink() ? fs.statSync(file) : stat;
+    if (effectiveStat.isDirectory()) {
+      archive.directory(file, false, (entry) => (isExcluded(entry.name, ctx.excludePatterns) ? false : entry));
+      return;
+    }
+
+    if (isExcluded(file, ctx.excludePatterns)) {
+      return;
+    }
+
+    const name = path.basename(file);
+    const readStream = fs.createReadStream(file);
+    readStream.on('error', ctx.fail);
+    archive.append(readStream, { name });
+    ctx.readStreams.push(readStream);
   }
 
   private compressFiles(
@@ -673,33 +721,7 @@ export class S3WrapperFiles {
 
       try {
         for (const file of files) {
-          if (file.includes('*')) {
-            archive.glob(file, excludePatterns.length ? { ignore: excludePatterns } : undefined);
-          } else {
-            const stat = fs.lstatSync(file);
-            if (stat.isSymbolicLink() && !followSymlinks) {
-              this.logger.warn?.(`${Config.TAG} Skipping symlink in archive: ${file}`);
-              continue;
-            }
-            const effectiveStat = stat.isSymbolicLink() ? fs.statSync(file) : stat;
-            if (effectiveStat.isDirectory()) {
-              archive.directory(file, false, (entry) => {
-                if (isExcluded(entry.name, excludePatterns)) {
-                  return false;
-                }
-                return entry;
-              });
-            } else {
-              if (isExcluded(file, excludePatterns)) {
-                continue;
-              }
-              const name = path.basename(file);
-              const readStream = fs.createReadStream(file);
-              readStream.on('error', fail);
-              archive.append(readStream, { name });
-              readStreams.push(readStream);
-            }
-          }
+          this.appendFileToArchive(archive, file, { followSymlinks, excludePatterns, readStreams, fail });
         }
       } catch (err) {
         fail(err);

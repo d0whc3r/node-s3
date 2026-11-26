@@ -83,15 +83,14 @@ export class Cli {
       };
     });
 
-    const outputs = [];
-    for (const info of parsed) {
-      const result = await this.s3Wrapper.cleanOlder(info.timeSpace, info.folder, undefined, {
-        dryRun: this.opts.dryRun,
-        keepLast: this.opts.keepLast
-      });
-      outputs.push(result);
-    }
-    return outputs;
+    return Promise.all(
+      parsed.map((info) =>
+        this.s3Wrapper.cleanOlder(info.timeSpace, info.folder, undefined, {
+          dryRun: this.opts.dryRun,
+          keepLast: this.opts.keepLast
+        })
+      )
+    );
   }
 
   async backup(files: string | string[], overrides: Partial<S3Options> = {}) {
@@ -181,7 +180,7 @@ export class Cli {
 
   private beautifulFiles(files: _Object[]) {
     const parsed = files.map((file) => file.Key).filter((k): k is string => Boolean(k));
-    parsed.sort();
+    parsed.sort((a, b) => a.localeCompare(b));
     parsed.forEach((file) => {
       console.info(file);
     });
