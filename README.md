@@ -1,6 +1,6 @@
 # node-s3
 
-CLI and Node.js library to back up, restore, encrypt, and prune files on **AWS S3**, **Cloudflare R2**, **Backblaze B2**, **MinIO**, and any S3-compatible storage—works via **Docker**, **npx/npm**, or as a **standalone binary** (Linux, macOS, Windows).
+CLI and Node.js library to back up, restore, encrypt, and prune **files and databases (PostgreSQL, MySQL/MariaDB, MongoDB, SQLite)** on **AWS S3**, **Cloudflare R2**, **Backblaze B2**, **MinIO**, and any S3-compatible storage—works via **Docker**, **npx/npm**, or as a **standalone binary** (Linux, macOS, Windows).
 
 [![CI](https://img.shields.io/github/actions/workflow/status/d0whc3r/node-s3/nodejs.yml?branch=master&style=flat-square&logo=githubactions&logoColor=white&label=CI)](https://github.com/d0whc3r/node-s3/actions/workflows/nodejs.yml)
 [![npm](https://img.shields.io/npm/v/@d0whc3r/node-s3?style=flat-square&logo=npm&logoColor=white)](https://www.npmjs.com/package/@d0whc3r/node-s3)
@@ -54,18 +54,19 @@ Optional installer overrides:
 
 ```bash
 # Pin a specific version or custom install directory
-VERSION=v1.4.1 INSTALL_DIR="$HOME/.local/bin" \
+VERSION=v1.5.0 INSTALL_DIR="$HOME/.local/bin" \
   curl -fsSL https://raw.githubusercontent.com/d0whc3r/node-s3/master/install.sh | sh
 ```
 
-Update an installed standalone binary in place at any time:
+Update an installed standalone binary in place at any time (no S3 credentials required):
 
 ```bash
 node-s3 --update            # Check GitHub Releases and replace binary atomically
 node-s3 --update --dry-run  # Check if a newer release is available without modifying the binary
+node-s3 --update --json     # Output machine-readable update status
 ```
 
-_(On Windows `x64`, download `node-s3-win-x64.exe` from [GitHub Releases](https://github.com/d0whc3r/node-s3/releases); `--update` works on Windows too.)_
+_(If installed via `npm`/`npx`, `--update` detects the Node.js runtime safely and prints the `npm install -g @d0whc3r/node-s3@latest` command instead of touching the binary. On Windows `x64`, download `node-s3-win-x64.exe` from [GitHub Releases](https://github.com/d0whc3r/node-s3/releases); `--update` works on Windows too.)_
 
 ---
 
@@ -196,23 +197,23 @@ node-s3 --bucket my-bucket --db postgres -f postgres --encrypt && \
 
 Precedence: **CLI flags / constructor options > `AWS_*` variables > legacy variables > defaults**.
 
-| Variable                                                                                    | Legacy Alias | Description                                               | Default           |
-| ------------------------------------------------------------------------------------------- | ------------ | --------------------------------------------------------- | ----------------- |
-| `AWS_ENDPOINT_URL`                                                                          | `ENDPOINT`   | Custom S3-compatible endpoint URL                         | AWS S3 default    |
-| `AWS_ACCESS_KEY_ID`                                                                         | `ACCESS_KEY` | Access key ID                                             | —                 |
-| `AWS_SECRET_ACCESS_KEY`                                                                     | `SECRET_KEY` | Secret access key                                         | —                 |
-| `AWS_SESSION_TOKEN`                                                                         | —            | Temporary STS session token                               | —                 |
-| `AWS_REGION`                                                                                | —            | S3 region (`auto` for Cloudflare R2)                      | `us-east-1`       |
-| `BUCKET`                                                                                    | —            | Default target bucket name                                | —                 |
-| `MAX_RETRIES`                                                                               | —            | Retry attempts on transient S3 errors                     | `3`               |
-| `FORCE_PATH_STYLE`                                                                          | —            | Path-style URLs (`true`/`false`)                          | `true`            |
-| `SSL_ENABLED`                                                                               | —            | Enforce TLS (`true`/`false`)                              | `true`            |
-| `BACKUP_ENCRYPTION_KEY`                                                                     | —            | Passphrase for `--encrypt` (AES-256-GCM)                  | —                 |
-| `DATABASE_URL`                                                                              | —            | Connection URI (auto-detects Postgres/MySQL/Mongo/SQLite) | —                 |
-| `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, `PGSSLMODE`                       | —            | PostgreSQL connection for `--db postgres`                 | `localhost:5432`  |
-| `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE`                | —            | MySQL / MariaDB connection for `--db mysql` / `--mysql`   | `localhost:3306`  |
-| `MONGODB_URI`, `MONGO_HOST`, `MONGO_PORT`, `MONGO_USER`, `MONGO_PASSWORD`, `MONGO_DATABASE` | —            | MongoDB connection for `--db mongodb`                     | `localhost:27017` |
-| `SQLITE_PATH`                                                                               | —            | SQLite database file path for `--db sqlite`               | —                 |
+| Variable                                                                                                     | Legacy Alias | Description                                               | Default           |
+| ------------------------------------------------------------------------------------------------------------ | ------------ | --------------------------------------------------------- | ----------------- |
+| `AWS_ENDPOINT_URL`                                                                                           | `ENDPOINT`   | Custom S3-compatible endpoint URL                         | AWS S3 default    |
+| `AWS_ACCESS_KEY_ID`                                                                                          | `ACCESS_KEY` | Access key ID                                             | —                 |
+| `AWS_SECRET_ACCESS_KEY`                                                                                      | `SECRET_KEY` | Secret access key                                         | —                 |
+| `AWS_SESSION_TOKEN`                                                                                          | —            | Temporary STS session token                               | —                 |
+| `AWS_REGION`                                                                                                 | —            | S3 region (`auto` for Cloudflare R2)                      | `us-east-1`       |
+| `BUCKET`                                                                                                     | —            | Default target bucket name                                | —                 |
+| `MAX_RETRIES`                                                                                                | —            | Retry attempts on transient S3 errors                     | `3`               |
+| `FORCE_PATH_STYLE`                                                                                           | —            | Path-style URLs (`true`/`false`)                          | `true`            |
+| `SSL_ENABLED`                                                                                                | —            | Enforce TLS (`true`/`false`)                              | `true`            |
+| `BACKUP_ENCRYPTION_KEY`                                                                                      | —            | Passphrase for `--encrypt` (AES-256-GCM)                  | —                 |
+| `DATABASE_URL`                                                                                               | —            | Connection URI (auto-detects Postgres/MySQL/Mongo/SQLite) | —                 |
+| `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, `PGSSLMODE`                                        | —            | PostgreSQL connection for `--db postgres`                 | `localhost:5432`  |
+| `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE`                                 | —            | MySQL / MariaDB connection for `--db mysql` / `--mysql`   | `localhost:3306`  |
+| `MONGODB_URI`, `MONGO_HOST`, `MONGO_PORT`, `MONGO_USER`, `MONGO_PASSWORD`, `MONGO_DATABASE`, `MONGO_AUTH_DB` | —            | MongoDB connection for `--db mongodb`                     | `localhost:27017` |
+| `SQLITE_PATH`                                                                                                | —            | SQLite database file path for `--db sqlite`               | —                 |
 
 See [example.env](./example.env) for a ready-to-copy template.
 
@@ -239,7 +240,7 @@ See [example.env](./example.env) for a ready-to-copy template.
 | `--dry-run`             | —     | Preview uploads/deletions without modifying S3                             |
 | `--encrypt`             | —     | Encrypt on upload / decrypt on download using `$BACKUP_ENCRYPTION_KEY`     |
 | `--stdin`               | —     | Read upload payload from standard input (requires `--name`)                |
-| `--name <filename>`     | —     | Object filename when using `--stdin`                                       |
+| `--name <filename>`     | —     | Destination filename when using `--stdin` or custom dump name for `--db`   |
 | `--db <engine>`         | —     | Native DB backup: `postgres`, `mysql` (`mariadb`), `mongodb`, `sqlite`     |
 | `--db-url <uri>`        | —     | Database connection URI (auto-detects engine from scheme)                  |
 | `--db-format <fmt>`     | —     | PostgreSQL dump format: `plain` (`.sql`), `custom` (`.dump`), `tar`        |
@@ -271,7 +272,7 @@ See [example.env](./example.env) for a ready-to-copy template.
 
 ### Exit Codes
 
-- `0`: Success (or `--help` / `--version`).
+- `0`: Success (or `--help` / `--version` / `--update`).
 - `1`: Runtime or S3 API error.
 - `2`: Invalid CLI arguments or missing required options.
 
