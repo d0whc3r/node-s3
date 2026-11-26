@@ -625,7 +625,7 @@ export class S3WrapperFiles {
     }
     const value = Number(match[1]);
     if (Number.isNaN(value)) {
-      throw new Error(`${Config.TAG} Invalid time unit in "${timeSpace}"`);
+      throw new TypeError(`${Config.TAG} Invalid time unit in "${timeSpace}"`);
     }
     return { value, unit };
   }
