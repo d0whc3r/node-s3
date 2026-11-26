@@ -1,6 +1,6 @@
 {
   "name": "@d0whc3r/node-s3",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "keywords": [
     "aws",
     "backup",

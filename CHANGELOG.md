@@ -1,5 +1,12 @@
 # Changelog
 
+# [1.5.0](https://github.com/d0whc3r/node-s3/compare/v1.4.1...v1.5.0) (2026-11-26)
+
+
+### Features
+
+* add native database backup providers for PostgreSQL, MySQL/MariaDB, MongoDB, and SQLite ([e2c8cd2](https://github.com/d0whc3r/node-s3/commit/e2c8cd25973bf64486c06e24028f5a4f437a1965))
+
 ## [1.4.1](https://github.com/d0whc3r/node-s3/compare/v1.4.0...v1.4.1) (2026-11-26)
 
 
