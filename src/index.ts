@@ -153,6 +153,7 @@ export class S3Wrapper {
     return this.s3Files.cleanOlder(bucket, timeSpace, folderName, options);
   }
 
+  /** @deprecated Use `dumpDatabase({ engine: 'mysql' })` instead. */
   public createDumpFile() {
     return this.s3Files.createDumpFile();
   }
@@ -173,5 +174,7 @@ export class S3Wrapper {
 }
 
 export { createDecryptStream, createEncryptStream } from './crypto';
+export { detectDbEngineFromUrl, dumpDatabase, normalizeDbEngine, SUPPORTED_DB_ENGINES } from './db';
+export type { DbDumpFileResult, DbDumpOptions, DbDumpResult, DbDumpStreamResult, DbEngine, DbProvider, PostgresFormat } from './db';
 export { normalizeS3Key } from './s3/files';
 export * from './types';

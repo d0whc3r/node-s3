@@ -115,6 +115,14 @@ describe('CLI (unit)', () => {
       });
     });
 
+    it('parses --db, --db-url, and --db-format flags', () => {
+      const opts = parseCliArgs(['--db', 'postgres', '--db-url', 'postgresql://localhost/app', '--db-format', 'custom', '-f', 'pg']);
+      expect(opts.db).toBe('postgres');
+      expect(opts.dbUrl).toBe('postgresql://localhost/app');
+      expect(opts.dbFormat).toBe('custom');
+      expect(opts.folder).toBe('pg');
+    });
+
     it('throws on unknown flags', () => {
       expect(() => parseCliArgs(['--unknown-flag'])).toThrow();
     });
@@ -219,18 +227,30 @@ describe('CLI (unit)', () => {
       await expect(cli.delete(['7d'])).rejects.toThrowError('DeleteFailed');
     });
 
-    it('dumpMysql cleans up temp dump directory even when upload fails', async () => {
-      const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'node-s3-cli-dump-'));
-      const dumpFile = path.join(tmpDir, 'mysqldump-test.sql');
-      await fsp.writeFile(dumpFile, '-- sql');
+    it('backupDatabase backs up SQLite natively and cleans up temp directory even when upload fails', async () => {
+      const { DatabaseSync } = await import('node:sqlite');
+      const workDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'node-s3-cli-sqlite-'));
+      const sqlitePath = path.join(workDir, 'test.sqlite');
+      const db = new DatabaseSync(sqlitePath);
+      db.exec('CREATE TABLE t (id INT);');
+      db.close();
 
+      let uploadedPath = '';
       const wrapper = createMockWrapper();
-      vi.mocked(wrapper.createDumpFile).mockResolvedValue(dumpFile);
-      vi.mocked(wrapper.uploadFiles).mockRejectedValueOnce(new Error('S3Down'));
+      vi.mocked(wrapper.uploadFiles).mockImplementationOnce(async (files) => {
+        uploadedPath = Array.isArray(files) ? files[0] : files;
+        expect(fs.existsSync(uploadedPath)).toBe(true);
+        throw new Error('S3Down');
+      });
 
-      const cli = new Cli({ mysql: true, folder: 'db' }, wrapper);
-      await expect(cli.parseOptions()).rejects.toThrowError('S3Down');
-      expect(fs.existsSync(tmpDir)).toBe(false);
+      try {
+        const cli = new Cli({ db: 'sqlite', dbUrl: `sqlite://${sqlitePath}`, folder: 'db' }, wrapper);
+        await expect(cli.parseOptions()).rejects.toThrowError('S3Down');
+        expect(uploadedPath).toContain('sqlite-test-');
+        expect(fs.existsSync(path.dirname(uploadedPath))).toBe(false);
+      } finally {
+        await fsp.rm(workDir, { recursive: true, force: true });
+      }
     });
   });
 });

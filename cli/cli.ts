@@ -3,7 +3,7 @@ import { getUsageGuide, parseCliArgs, S3Options } from './cliconfig';
 import { Cli } from './climodule';
 
 function hasAction(opts: S3Options): boolean {
-  return Boolean(opts.list || opts.backup?.length || opts.delete?.length || opts.mysql || opts.download || opts.stdin);
+  return Boolean(opts.list || opts.backup?.length || opts.delete?.length || opts.mysql || opts.db || opts.dbUrl || opts.download || opts.stdin);
 }
 
 async function main(): Promise<void> {

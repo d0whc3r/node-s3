@@ -102,11 +102,32 @@ export const optionDefinitions: OptionDefinition[] = [
     description: 'Keep the newest N files when running --delete'
   },
   {
+    name: 'db',
+    typeLabel: '{underline engine}',
+    multiple: false,
+    type: String,
+    description: 'Database backup engine: postgres, mysql (or mariadb), mongodb, sqlite'
+  },
+  {
+    name: 'db-url',
+    typeLabel: '{underline uri}',
+    multiple: false,
+    type: String,
+    description: 'Database connection URI (auto-detects engine from scheme; overrides $DATABASE_URL)'
+  },
+  {
+    name: 'db-format',
+    typeLabel: '{underline format}',
+    multiple: false,
+    type: String,
+    description: 'PostgreSQL dump format: plain (.sql), custom (.dump), or tar (.tar)'
+  },
+  {
     name: 'mysql',
     alias: 'm',
     multiple: false,
     type: Boolean,
-    description: 'MySQL backup using environment variables ($MYSQL_USER, $MYSQL_PASSWORD, $MYSQL_DATABASE, $MYSQL_HOST, $MYSQL_PORT)'
+    description: 'Alias for --db mysql (uses $MYSQL_* or $DATABASE_URL)'
   },
   {
     name: 'stdin',
@@ -219,6 +240,9 @@ export interface S3Options {
   replace?: boolean;
   delete?: string[];
   keepLast?: number;
+  db?: string;
+  dbUrl?: string;
+  dbFormat?: 'plain' | 'custom' | 'tar';
   mysql?: boolean;
   stdin?: boolean;
   name?: string;
@@ -256,6 +280,9 @@ const STRING_OPTION_MAP: ReadonlyArray<readonly [string, keyof S3Options]> = [
   ['output', 'output'],
   ['folder', 'folder'],
   ['name', 'name'],
+  ['db', 'db'],
+  ['db-url', 'dbUrl'],
+  ['db-format', 'dbFormat'],
   ['storage-class', 'storageClass'],
   ['sse', 'sse'],
   ['kms-key-id', 'kmsKeyId'],
@@ -348,8 +375,8 @@ export function getUsageGuide(): string {
           example: `$ pg_dump mydb | ${baseExec} --stdin --name mydb.sql -f db-backups`
         },
         {
-          desc: '8. Generate MySQL dump, zip it and upload to "mysql-backup" folder.',
-          example: `$ ${baseExec} -f mysql-backup -m -z`
+          desc: '8. Backup PostgreSQL, MySQL, MongoDB, or SQLite natively (streamed directly to S3).',
+          example: `$ ${baseExec} --db postgres -f backups/pg --encrypt\n$ ${baseExec} --db-url "mongodb+srv://user:pass@host/mydb" -f backups/mongo\n$ ${baseExec} --db sqlite -f backups/sqlite -z`
         }
       ]
     }

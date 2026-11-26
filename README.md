@@ -22,6 +22,13 @@ docker run --rm \
   -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_REGION -e BUCKET \
   -v "$PWD/data:/data:ro" \
   d0whc3r/s3 -b /data -z backup.zip -f daily -c -r
+
+# Back up PostgreSQL / MySQL / MariaDB / MongoDB using the :db image variant
+# (includes pg_dump, mariadb-dump, and mongodump; SQLite works in both images)
+docker run --rm \
+  -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_REGION -e BUCKET \
+  -e DATABASE_URL="postgresql://user:pass@host:5432/mydb" \
+  d0whc3r/s3:db --db postgres -f postgres --encrypt
 ```
 
 ### 2. npx / npm (Node.js >= 26)
@@ -93,6 +100,52 @@ node-s3 --bucket local-backups -c -b "./files/*"
 
 ---
 
+## Database Backups
+
+`node-s3` supports native backups for **PostgreSQL**, **MySQL / MariaDB**, **MongoDB**, and **SQLite** without piping through `--stdin`.
+
+| Engine              | CLI Flag / Aliases                   | Underlying Method                                                           | Mode                                        | Docker Image                                |
+| ------------------- | ------------------------------------ | --------------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------- |
+| **PostgreSQL**      | `--db postgres` (`pg`, `postgresql`) | `pg_dump` (`plain`, `custom`, `tar`)                                        | Direct stream (`O(1)` RAM, zero temp disk)  | `d0whc3r/s3:db`                             |
+| **MySQL / MariaDB** | `--db mysql` (`mariadb`, `-m`)       | `mysqldump` / `mariadb-dump` (auto-fallback to pure-JS `mysqldump`)         | Direct stream (or temp file on JS fallback) | `d0whc3r/s3:db` _(or slim via JS fallback)_ |
+| **MongoDB**         | `--db mongodb` (`mongo`)             | `mongodump --archive`                                                       | Direct stream (`O(1)` RAM, zero temp disk)  | `d0whc3r/s3:db`                             |
+| **SQLite**          | `--db sqlite` (`sqlite3`)            | Node.js built-in `node:sqlite` online backup (WAL-safe, zero external deps) | Temp file (`0600`, auto-cleaned)            | `d0whc3r/s3:latest` & `:db`                 |
+
+> **Streaming & Compression:** Without `-z`/`--zip`, PostgreSQL, MySQL/MariaDB, and MongoDB stream directly into S3 (and optional `--encrypt` AES-256-GCM) with zero temp disk space. Adding `-z` compresses the dump into a ZIP archive in a `0700` temp directory before uploading.
+>
+> **Credential Safety:** Passwords are never passed as CLI arguments (`ps`-safe). They are injected via `PGPASSWORD`, `MYSQL_PWD`, or a temporary `0600` `mongodump --config` file that is removed immediately after the dump finishes.
+
+### Engine Examples
+
+```bash
+# PostgreSQL using standard PG* environment variables
+PGHOST=db.internal PGUSER=postgres PGPASSWORD=secret PGDATABASE=app \
+  node-s3 --bucket my-bucket --db postgres -f backups/pg --encrypt
+
+# PostgreSQL custom binary format (.dump) via connection URI (auto-detects engine)
+node-s3 --bucket my-bucket --db-url "postgresql://postgres:secret@db.internal:5432/app?sslmode=require" \
+  --db-format custom -f backups/pg --encrypt
+
+# MySQL / MariaDB (via --db mysql, --db mariadb, -m, or URI)
+node-s3 --bucket my-bucket --db-url "mariadb://root:secret@127.0.0.1:3306/shop" -f backups/mysql
+
+# MongoDB single-file archive via MONGODB_URI or --db-url
+MONGODB_URI="mongodb+srv://user:secret@cluster.example.com/orders" \
+  node-s3 --bucket my-bucket --db mongodb -f backups/mongo --encrypt
+
+# SQLite online backup (safe while the database is in active WAL use)
+node-s3 --bucket my-bucket --db sqlite --db-url "sqlite:///var/data/app.sqlite" -z -f backups/sqlite
+
+# Docker (:db variant bundles pg_dump, mariadb-dump, and mongodump)
+docker run --rm \
+  -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_REGION -e BUCKET \
+  -e DATABASE_URL="postgresql://postgres:secret@host.docker.internal:5432/app" \
+  -e BACKUP_ENCRYPTION_KEY="my-strong-passphrase" \
+  d0whc3r/s3:db --db postgres -f backups/pg --encrypt
+```
+
+---
+
 ## Common Usage Examples
 
 ```bash
@@ -107,15 +160,18 @@ BACKUP_ENCRYPTION_KEY="my-strong-passphrase" \
 BACKUP_ENCRYPTION_KEY="my-strong-passphrase" \
   node-s3 --bucket my-bucket --download backups/src.zip -o ./restored.zip --encrypt
 
-# Pipe a PostgreSQL dump directly to S3 without writing to disk
-pg_dump mydb | node-s3 --bucket my-bucket --stdin --name mydb.sql -f postgres --encrypt
+# Native database backups (PostgreSQL, MySQL/MariaDB, MongoDB, SQLite)
+node-s3 --bucket my-bucket --db postgres -f postgres --encrypt
+node-s3 --bucket my-bucket --db-url "postgresql://user:pass@host:5432/mydb" --db-format custom -f postgres
+node-s3 --bucket my-bucket --db-url "mongodb+srv://user:pass@cluster/mydb" -f mongo --encrypt
+node-s3 --bucket my-bucket --db sqlite --db-url "sqlite:///var/data/app.sqlite" -z -f sqlite
 
 # Preview retention cleanup safely before deleting anything
 node-s3 --bucket my-bucket -d daily=30d --keep-last 5 --dry-run
 
-# Nightly cron job: MySQL dump + zip + encrypt + prune older than 14 days (keep at least 5)
-node-s3 --bucket my-bucket -m -z -f mysql --encrypt && \
-  node-s3 --bucket my-bucket -d mysql=14d --keep-last 5
+# Nightly cron job: PostgreSQL dump + encrypt + prune older than 14 days (keep at least 5)
+node-s3 --bucket my-bucket --db postgres -f postgres --encrypt && \
+  node-s3 --bucket my-bucket -d postgres=14d --keep-last 5
 ```
 
 ---
@@ -124,19 +180,23 @@ node-s3 --bucket my-bucket -m -z -f mysql --encrypt && \
 
 Precedence: **CLI flags / constructor options > `AWS_*` variables > legacy variables > defaults**.
 
-| Variable                                                                     | Legacy Alias | Description                              | Default          |
-| ---------------------------------------------------------------------------- | ------------ | ---------------------------------------- | ---------------- |
-| `AWS_ENDPOINT_URL`                                                           | `ENDPOINT`   | Custom S3-compatible endpoint URL        | AWS S3 default   |
-| `AWS_ACCESS_KEY_ID`                                                          | `ACCESS_KEY` | Access key ID                            | —                |
-| `AWS_SECRET_ACCESS_KEY`                                                      | `SECRET_KEY` | Secret access key                        | —                |
-| `AWS_SESSION_TOKEN`                                                          | —            | Temporary STS session token              | —                |
-| `AWS_REGION`                                                                 | —            | S3 region (`auto` for Cloudflare R2)     | `us-east-1`      |
-| `BUCKET`                                                                     | —            | Default target bucket name               | —                |
-| `MAX_RETRIES`                                                                | —            | Retry attempts on transient S3 errors    | `3`              |
-| `FORCE_PATH_STYLE`                                                           | —            | Path-style URLs (`true`/`false`)         | `true`           |
-| `SSL_ENABLED`                                                                | —            | Enforce TLS (`true`/`false`)             | `true`           |
-| `BACKUP_ENCRYPTION_KEY`                                                      | —            | Passphrase for `--encrypt` (AES-256-GCM) | —                |
-| `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE` | —            | MySQL connection for `--mysql`           | `localhost:3306` |
+| Variable                                                                                    | Legacy Alias | Description                                               | Default           |
+| ------------------------------------------------------------------------------------------- | ------------ | --------------------------------------------------------- | ----------------- |
+| `AWS_ENDPOINT_URL`                                                                          | `ENDPOINT`   | Custom S3-compatible endpoint URL                         | AWS S3 default    |
+| `AWS_ACCESS_KEY_ID`                                                                         | `ACCESS_KEY` | Access key ID                                             | —                 |
+| `AWS_SECRET_ACCESS_KEY`                                                                     | `SECRET_KEY` | Secret access key                                         | —                 |
+| `AWS_SESSION_TOKEN`                                                                         | —            | Temporary STS session token                               | —                 |
+| `AWS_REGION`                                                                                | —            | S3 region (`auto` for Cloudflare R2)                      | `us-east-1`       |
+| `BUCKET`                                                                                    | —            | Default target bucket name                                | —                 |
+| `MAX_RETRIES`                                                                               | —            | Retry attempts on transient S3 errors                     | `3`               |
+| `FORCE_PATH_STYLE`                                                                          | —            | Path-style URLs (`true`/`false`)                          | `true`            |
+| `SSL_ENABLED`                                                                               | —            | Enforce TLS (`true`/`false`)                              | `true`            |
+| `BACKUP_ENCRYPTION_KEY`                                                                     | —            | Passphrase for `--encrypt` (AES-256-GCM)                  | —                 |
+| `DATABASE_URL`                                                                              | —            | Connection URI (auto-detects Postgres/MySQL/Mongo/SQLite) | —                 |
+| `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, `PGSSLMODE`                       | —            | PostgreSQL connection for `--db postgres`                 | `localhost:5432`  |
+| `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE`                | —            | MySQL / MariaDB connection for `--db mysql` / `--mysql`   | `localhost:3306`  |
+| `MONGODB_URI`, `MONGO_HOST`, `MONGO_PORT`, `MONGO_USER`, `MONGO_PASSWORD`, `MONGO_DATABASE` | —            | MongoDB connection for `--db mongodb`                     | `localhost:27017` |
+| `SQLITE_PATH`                                                                               | —            | SQLite database file path for `--db sqlite`               | —                 |
 
 See [example.env](./example.env) for a ready-to-copy template.
 
@@ -164,7 +224,10 @@ See [example.env](./example.env) for a ready-to-copy template.
 | `--encrypt`             | —     | Encrypt on upload / decrypt on download using `$BACKUP_ENCRYPTION_KEY`     |
 | `--stdin`               | —     | Read upload payload from standard input (requires `--name`)                |
 | `--name <filename>`     | —     | Object filename when using `--stdin`                                       |
-| `--mysql`               | `-m`  | Create and upload a MySQL dump using `$MYSQL_*` env vars                   |
+| `--db <engine>`         | —     | Native DB backup: `postgres`, `mysql` (`mariadb`), `mongodb`, `sqlite`     |
+| `--db-url <uri>`        | —     | Database connection URI (auto-detects engine from scheme)                  |
+| `--db-format <fmt>`     | —     | PostgreSQL dump format: `plain` (`.sql`), `custom` (`.dump`), `tar`        |
+| `--mysql`               | `-m`  | Alias for `--db mysql`                                                     |
 | `--storage-class <cls>` | —     | S3 storage class (e.g. `STANDARD_IA`, `GLACIER_IR`, `INTELLIGENT_TIERING`) |
 | `--sse <algo>`          | —     | Server-side encryption (`AES256` or `aws:kms`)                             |
 | `--kms-key-id <id>`     | —     | KMS Key ID when using `--sse aws:kms`                                      |
@@ -206,7 +269,7 @@ npm install @d0whc3r/node-s3
 ### ESM / TypeScript
 
 ```ts
-import { S3Wrapper } from '@d0whc3r/node-s3';
+import { dumpDatabase, S3Wrapper } from '@d0whc3r/node-s3';
 
 const s3 = new S3Wrapper({
   endpoint: 'https://s3.eu-central-1.amazonaws.com',
@@ -232,6 +295,26 @@ try {
   await s3.downloadFile('daily/dump.sql', './restored.sql', {
     decryptKey: process.env.BACKUP_ENCRYPTION_KEY
   });
+
+  // Stream a PostgreSQL dump directly to S3 with client-side encryption
+  const dump = await dumpDatabase({
+    url: process.env.DATABASE_URL,
+    format: 'custom'
+  });
+  try {
+    if (dump.kind === 'stream') {
+      await s3.uploadStream(dump.stream, dump.filename, 'postgres', {
+        encryptKey: process.env.BACKUP_ENCRYPTION_KEY
+      });
+      await dump.wait();
+    } else {
+      await s3.uploadFile(dump.filePath, 'postgres', {
+        encryptKey: process.env.BACKUP_ENCRYPTION_KEY
+      });
+    }
+  } finally {
+    await dump.cleanup();
+  }
 
   // Delete files older than 30 days while keeping at least the 5 newest
   await s3.cleanOlder('30d', 'daily', undefined, { keepLast: 5 });

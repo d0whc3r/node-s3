@@ -1,8 +1,7 @@
-import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { Readable } from 'node:stream';
 import { _Object } from '@aws-sdk/client-s3';
-import { S3Wrapper, UploadOptions } from '../src';
+import { dumpDatabase, S3Wrapper, UploadOptions } from '../src';
 import { Config } from '../src/config';
 import { S3Options } from './cliconfig';
 
@@ -46,7 +45,9 @@ export class Cli {
     if (this.opts.delete?.length) {
       results.delete = await this.delete(this.opts.delete, this.opts.folder);
     }
-    if (this.opts.mysql) {
+    if (this.opts.db || this.opts.dbUrl) {
+      results.db = await this.backupDatabase();
+    } else if (this.opts.mysql) {
       results.mysql = await this.dumpMysql();
     }
     if (this.opts.list) {
@@ -144,13 +145,46 @@ export class Cli {
     return savedPath;
   }
 
-  async dumpMysql(overrides: Partial<S3Options> = {}) {
-    const mysqlFile = await this.s3Wrapper.createDumpFile();
+  async backupDatabase(overrides: Partial<S3Options> = {}) {
+    const merged = { ...this.opts, ...overrides };
+    const engine = merged.db || (merged.mysql ? 'mysql' : undefined);
+    const wantsZip = Boolean(merged.zip || merged.zip === null);
+
+    const dump = await dumpDatabase({
+      engine,
+      url: merged.dbUrl,
+      format: merged.dbFormat,
+      preferFile: wantsZip,
+      filename: merged.name,
+      tag: Config.TAG
+    });
+
     try {
-      return await this.backup(mysqlFile, overrides);
+      if (dump.kind === 'stream') {
+        const encryptKey = this.resolveEncryptionKey(merged.encrypt);
+        const uploaded = await this.s3Wrapper.uploadStream(dump.stream, dump.filename, merged.folder || undefined, {
+          replace: merged.replace,
+          create: merged.create,
+          storageClass: merged.storageClass,
+          acl: merged.acl,
+          serverSideEncryption: merged.sse,
+          kmsKeyId: merged.kmsKeyId,
+          expire: merged.expire,
+          dryRun: merged.dryRun,
+          encryptKey
+        });
+        await dump.wait();
+        return uploaded;
+      }
+
+      return await this.backup(dump.filePath, overrides);
     } finally {
-      await fsp.rm(path.dirname(mysqlFile), { recursive: true, force: true });
+      await dump.cleanup();
     }
+  }
+
+  async dumpMysql(overrides: Partial<S3Options> = {}) {
+    return this.backupDatabase({ ...overrides, db: 'mysql' });
   }
 
   private resolveEncryptionKey(encrypt?: boolean): string | undefined {
