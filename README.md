@@ -44,12 +44,28 @@ node-s3 --help
 
 ### 3. Standalone Binary (No Node.js required)
 
-Download the prebuilt `node-s3` (Linux / macOS) or `node-s3.exe` (Windows) executable from [GitHub Releases](https://github.com/d0whc3r/node-s3/releases) and run it directly:
+Install the prebuilt binary on **Linux (`x64`)** or **macOS (`arm64`)** with a single command:
 
 ```bash
-chmod +x ./node-s3
-./node-s3 --help
+curl -fsSL https://raw.githubusercontent.com/d0whc3r/node-s3/master/install.sh | sh
 ```
+
+Optional installer overrides:
+
+```bash
+# Pin a specific version or custom install directory
+VERSION=v1.4.1 INSTALL_DIR="$HOME/.local/bin" \
+  curl -fsSL https://raw.githubusercontent.com/d0whc3r/node-s3/master/install.sh | sh
+```
+
+Update an installed standalone binary in place at any time:
+
+```bash
+node-s3 --update            # Check GitHub Releases and replace binary atomically
+node-s3 --update --dry-run  # Check if a newer release is available without modifying the binary
+```
+
+_(On Windows `x64`, download `node-s3-win-x64.exe` from [GitHub Releases](https://github.com/d0whc3r/node-s3/releases); `--update` works on Windows too.)_
 
 ---
 
@@ -235,6 +251,7 @@ See [example.env](./example.env) for a ready-to-copy template.
 | `--expire <duration>`   | —     | Set object `Expires` header relative to now (e.g. `30d`, `12h`)            |
 | `--json`                | —     | Output machine-readable JSON (ideal for CI/scripts)                        |
 | `--quiet`               | `-q`  | Suppress informational logs                                                |
+| `--update`              | `-u`  | Update standalone binary to latest GitHub release (supports `--dry-run`)   |
 | `--version`             | `-v`  | Print CLI version                                                          |
 | `--help`                | `-h`  | Print usage guide                                                          |
 

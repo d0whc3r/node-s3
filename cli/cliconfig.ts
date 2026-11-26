@@ -210,6 +210,13 @@ export const optionDefinitions: OptionDefinition[] = [
     description: 'Suppress informational logs'
   },
   {
+    name: 'update',
+    alias: 'u',
+    multiple: false,
+    type: Boolean,
+    description: 'Update standalone binary to the latest GitHub release (supports --dry-run)'
+  },
+  {
     name: 'version',
     alias: 'v',
     multiple: false,
@@ -256,11 +263,13 @@ export interface S3Options {
   dryRun?: boolean;
   json?: boolean;
   quiet?: boolean;
+  update?: boolean;
 }
 
 const BOOLEAN_OPTION_MAP: ReadonlyArray<readonly [string, keyof S3Options]> = [
   ['help', 'help'],
   ['version', 'version'],
+  ['update', 'update'],
   ['list', 'list'],
   ['create', 'create'],
   ['replace', 'replace'],

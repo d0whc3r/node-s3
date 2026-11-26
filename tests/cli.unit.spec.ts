@@ -115,12 +115,14 @@ describe('CLI (unit)', () => {
       });
     });
 
-    it('parses --db, --db-url, and --db-format flags', () => {
-      const opts = parseCliArgs(['--db', 'postgres', '--db-url', 'postgresql://localhost/app', '--db-format', 'custom', '-f', 'pg']);
+    it('parses --db, --db-url, --db-format, and --update flags', () => {
+      const opts = parseCliArgs(['--db', 'postgres', '--db-url', 'postgresql://localhost/app', '--db-format', 'custom', '-f', 'pg', '--update']);
       expect(opts.db).toBe('postgres');
       expect(opts.dbUrl).toBe('postgresql://localhost/app');
       expect(opts.dbFormat).toBe('custom');
       expect(opts.folder).toBe('pg');
+      expect(opts.update).toBe(true);
+      expect(parseCliArgs(['-u']).update).toBe(true);
     });
 
     it('throws on unknown flags', () => {
