@@ -1,5 +1,12 @@
 # Changelog
 
+# [1.6.0](https://github.com/d0whc3r/node-s3/compare/v1.5.0...v1.6.0) (2026-11-26)
+
+
+### Features
+
+* add curl installer and --update self-updater ([59d62b6](https://github.com/d0whc3r/node-s3/commit/59d62b6652fbecdfeb53c3300e9d8df4f5304deb))
+
 # [1.5.0](https://github.com/d0whc3r/node-s3/compare/v1.4.1...v1.5.0) (2026-11-26)
 
 
