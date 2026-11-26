@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/d0whc3r/node-s3/compare/v1.4.0...v1.4.1) (2026-11-26)
+
+
+### Bug Fixes
+
+* resolve SonarQube issues and add Docker Hub publishing ([9629ce3](https://github.com/d0whc3r/node-s3/commit/9629ce32a12be568ac2d87a7501bc66a0c051ebb))
+
 # [1.4.0](https://github.com/d0whc3r/node-s3/compare/v1.3.13...v1.4.0) (2026-11-25)
 
 
